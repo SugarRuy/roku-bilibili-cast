@@ -45,6 +45,8 @@ python scripts/push.py BV1xx411c7mD --roku-ip 192.168.1.177
 
 本次在退出到 Roku 首页后，接收器依次记录到手机客户端的 Platinum SSDP 搜索、设备描述查询、NVA `Play`、电视本机 `DIAL status=201` 和 `suspended=false`。ECP 随后报告 `dev` 播放器处于 `play`，用户也确认「可以了」。自动测试当时尚在首页等待阶段，没有发送合成 `Play`；它因 App 已被外部请求唤起而结束，不能记作整轮自动回归通过。
 
+原始事件的相对时间更明确：挂起 `5.061s`，`12.575s` 起读取频道的设备描述，`12.618s` 搜索 `upnp:rootdevice`，`12.694s` 读取 `NirvanaControl.xml`，`14.771s` 调用 `GetAppInfo`，`14.831s` 建立 NVA 连接，`15.190s` 发出 `Play`，`15.356s` 才出现 `self-wake DIAL status=201`，`15.393s` 频道恢复。`self-wake` 是频道接收 `Play` 后向本机 `127.0.0.1:8060/dial/RokuBiliCast` 发出的请求；它不是手机的 DIAL 启动请求。
+
 用户此次确认的是实际手机后台投屏可用，没有分别记录 Android、iPhone 及其客户端版本。原始部署信息和脱敏事件保存在忽略目录 `build/background-cast-current-deployment.json`。
 
 **仍无永久常驻保证。** 频道被系统回收后接收器也会消失。长期待机、内存压力、其他系统版本及两种手机平台的分别验收仍待完成。Roku 不再支持应用内 ECP 调用；本机 DIAL 在实机可用，不代表获得商店发布许可。当前证据支持评估将其作为实验功能合并，但不等于完成稳定版或商店发布验收。
@@ -62,6 +64,8 @@ python scripts/push.py BV1xx411c7mD --roku-ip 192.168.1.177
 | `urn:dial-multiscreen-org:service:dial:1` | `:8060/dial/dd.xml` | 无 |
 
 Roku 系统的 `:8060/` 描述了 ECP 和 DIAL，但没有 `MediaRenderer` 或 `NirvanaControl`；本频道的 `:9958/description.xml` 才提供这些 B 站手机端实际访问过的服务。系统**有** `upnp:rootdevice` 发现入口，却没有直接提供所需的 B 站接收协议。此前手机真实投屏依次访问本频道的描述、`GetAppInfo` 和 NVA `Play`，因此仅添加 `dial_title` 尚不能证明手机会在频道冷启动前发现它。手机是否存在另一个未观察到的 DIAL 路径，需要在没有 `:9958` 接收器时单独验证。
+
+现有日志只来自频道自己的 `:9958` TCP/UDP 服务，记录不到手机对 Roku 系统 `:8060` 的单播请求。频道的 SSDP 处理器也只有在自己对搜索类型作出回应时才写 `discovery` 日志；它不会记录不匹配的 DIAL 搜索。因此日志足以确定本次成功投屏使用了 `NirvanaControl`/NVA，**不能单凭日志中没有 DIAL 搜索就断定手机绝不支持 DIAL**。旧版控制台记录的多轮手机投屏也出现相同的 B 站服务路径，但没有弥补这个观测盲区。
 
 [Manifest 官方文档](https://developer.roku.com/dev/docs/channel-manifest)列出的 `dial_title` 把频道注册到系统 DIAL，由**知道 DIAL 应用名的外部发送方**发起启动；`usb_media_handler` 只针对 USB 设备插入。没有找到普通频道可注册的开机后台任务。[Instant Resume 官方文档](https://developer.roku.com/dev/docs/instant-resume)说明它保留的是设备 RAM 中的进程，也可能因内存压力被回收；文档还写明后台任务在挂起五秒后被阻塞。本机实验曾观察到任务在挂起超过两分钟后继续响应，这说明当前固件上的行为与文档不一致，不能把实验现象当作重启后自动启动的保证。
 
