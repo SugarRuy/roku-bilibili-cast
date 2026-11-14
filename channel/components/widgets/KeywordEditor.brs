@@ -22,7 +22,11 @@ sub onVisible()
         m.kb.text = ""
         m.message.text = "最多 20 条，每条最多 40 个字符"
         m.focusNode = m.kb
-        m.kb.setFocus(true)
+        if m.words.Count() > 0 then
+            m.focusNode = m.list
+            m.list.jumpToItem = 1
+        end if
+        m.focusNode.setFocus(true)
     end if
 end sub
 
@@ -50,35 +54,42 @@ end sub
 sub onSelected()
     index = m.list.itemSelected
     if index = 0 then
-        word = m.kb.text.Trim()
-        if word = "" then
-            m.message.text = "先在左侧输入关键词"
-            return
-        end if
-        if Len(word) > 40 then
-            m.message.text = "关键词最多 40 个字符"
-            return
-        end if
-        if m.words.Count() >= 20 then
-            m.message.text = "最多只能屏蔽 20 个关键词"
-            return
-        end if
-        for each existing in m.words
-            if LCase(existing) = LCase(word) then
-                m.message.text = "这个关键词已存在"
-                return
-            end if
-        end for
-        m.words.Push(word)
-        m.kb.text = ""
-        m.message.text = "已添加：“" + word + "”"
-        m.focusNode = m.kb
-        m.kb.setFocus(true)
+        addWord()
+        return
     else if index > 0 and index <= m.words.Count() then
         word = m.words[index - 1]
         m.words.Delete(index - 1)
         m.message.text = "已删除：“" + word + "”"
     end if
+    renderList()
+    m.top.updated = m.words
+end sub
+
+sub addWord()
+    word = m.kb.text.Trim()
+    if word = "" then
+        m.message.text = "先在左侧输入关键词"
+        return
+    end if
+    if Len(word) > 40 then
+        m.message.text = "关键词最多 40 个字符"
+        return
+    end if
+    if m.words.Count() >= 20 then
+        m.message.text = "最多只能屏蔽 20 个关键词"
+        return
+    end if
+    for each existing in m.words
+        if LCase(existing) = LCase(word) then
+            m.message.text = "这个关键词已存在"
+            return
+        end if
+    end for
+    m.words.Push(word)
+    m.kb.text = ""
+    m.message.text = "已添加：“" + word + "”"
+    m.focusNode = m.kb
+    m.kb.setFocus(true)
     renderList()
     m.top.updated = m.words
 end sub
@@ -90,7 +101,11 @@ end sub
 function onKeyEvent(key as String, press as Boolean) as Boolean
     if not press then return false
     if key = "back" then
-        m.top.closed = true
+        if m.kb.isInFocusChain() and m.kb.text.Trim() <> "" then
+            addWord()
+        else
+            m.top.closed = true
+        end if
         return true
     end if
     if m.kb.isInFocusChain() and key = "right" then

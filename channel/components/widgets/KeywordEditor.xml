@@ -10,7 +10,7 @@
   <children>
     <Rectangle width="1920" height="1080" color="0x0F0F14FF" />
     <Label id="heading" translation="[96,58]" text="关键词屏蔽" color="0xFFFFFFFF" />
-    <Label id="hint" translation="[96,128]" width="1650" text="输入关键词，按右键选“添加”；选已有关键词可删除。返回键关闭。" color="0xB4B4C0FF" />
+    <Label id="hint" translation="[96,128]" width="1650" text="输入后按返回添加；输入框为空时按返回关闭。选择已有关键词可删除。" color="0xB4B4C0FF" />
     <Group translation="[88,205]" scale="[0.8,0.8]">
       <MiniKeyboard id="kb" />
     </Group>
