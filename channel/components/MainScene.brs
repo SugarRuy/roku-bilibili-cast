@@ -22,6 +22,7 @@ sub init()
     push(CreateObject("roSGNode", "HomeScreen"))
     ' a saved session may have expired since last time
     if m.global.loggedIn then m.navTask = api("nav", invalid, "onNav")
+    startCastReceiver()
 end sub
 
 sub onLoggedIn()

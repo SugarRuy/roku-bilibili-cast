@@ -3,9 +3,12 @@
 <component name="PlayerScreen" extends="Group">
   <interface>
     <field id="request" type="assocarray" onChange="onRequest" />
+    <field id="castCommand" type="assocarray" alwaysNotify="true" onChange="onPlayerCastCommand" />
+    <field id="castState" type="assocarray" />
   </interface>
   <script type="text/brightscript" uri="pkg:/components/common/utils.brs" />
   <script type="text/brightscript" uri="PlayerScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/components/cast/CastPlayerAdapter.brs" />
   <children>
     <Rectangle width="1920" height="1080" color="0x000000FF" />
     <Video id="video" width="1920" height="1080" />

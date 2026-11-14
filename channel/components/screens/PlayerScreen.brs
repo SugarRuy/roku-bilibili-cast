@@ -39,6 +39,7 @@ sub init()
     m.format = ""
     m.related = []
     m.played = {}
+    m.castReleased = false
 
     ' play mode and danmaku live in the registry; the panel edits them
     m.danmaku.video = m.video
@@ -178,6 +179,7 @@ sub loadRelated(bvid as String)
 end sub
 
 sub onRelatedLoaded(event as Object)
+    if m.castReleased then return
     res = event.getData()
     if not res.ok or m.req = invalid then return
     m.related = res.data.items
@@ -207,6 +209,7 @@ sub openVideo(card as Object)
 end sub
 
 sub onVideoInfo(event as Object)
+    if m.castReleased then return
     res = event.getData()
     if not res.ok then
         showError("视频加载失败：" + res.error)
@@ -255,10 +258,11 @@ sub startPart(index as Integer, startAt as Integer, fmt as String)
     m.subLabel.text = line
     m.danmaku.cid = strOf(m.part.cid)
     if m.req.pages.Count() > 1 then buildList()   ' moves the ▶ marker
-    m.playTask = api("play", { bvid: m.req.bvid, cid: strOf(m.part.cid), fmt: fmt }, "onPlay")
+    m.playTask = api("play", { bvid: m.req.bvid, cid: strOf(m.part.cid), fmt: fmt }, "onPlay", strOf(m.req.castGeneration))
 end sub
 
 sub onPlay(event as Object)
+    if m.castReleased then return
     res = event.getData()
     if not res.ok then
         showError("无法获取播放地址：" + res.error)
@@ -283,6 +287,8 @@ sub onPlay(event as Object)
 end sub
 
 sub onState()
+    if m.castReleased then return
+    publishCastState()
     m.stateClock.Mark()
     s = m.video.state
     if s = "playing" then
@@ -327,6 +333,8 @@ sub onFinished()
 end sub
 
 sub onPosition()
+    if m.castReleased then return
+    publishCastState()
     secs = Int(m.video.position)
     if Abs(secs - m.lastSaved) >= 15 then save(false)
 end sub
