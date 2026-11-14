@@ -25,7 +25,7 @@ sub castServe()
     m.events = []
     m.commandId = 0
     m.httpPort = 9958
-    m.name = "Roku 小电视 · 投屏测试"
+    m.name = "Roku小电视"
     m.uuid = "3465d391-8c31-4ac9-8caf-c4a3e6e95ba4"
     m.bootId = CreateObject("roDateTime").AsSeconds().ToStr()
     m.udn = "uuid:" + m.uuid

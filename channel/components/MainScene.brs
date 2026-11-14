@@ -2,8 +2,8 @@ sub init()
     m.top.allowBackgroundTask = true
     m.top.backgroundColor = "0x0F0F14FF"
     m.top.backgroundUri = ""
-    m.global.theme = themeByKey(loadSetting("theme", "yellow"))
-    m.global.font = fontByKey(loadSetting("font", "kai"))
+    m.global.theme = themeByKey(loadSetting("theme", "pink"))
+    m.global.font = fontByKey(loadSetting("font", "hei"))
     m.global.observeField("font", "onFontChanged")
     m.global.observeField("loggedIn", "onLoggedIn")
     m.rebuildTimer = m.top.findNode("rebuildTimer")
