@@ -7,8 +7,8 @@ sub init()
         modeNames.Push(md.name)
     end for
     m.rowsDef = [
-        { name: "播放模式", labels: modeNames }
         { name: "弹幕", labels: ["关", "开"] }
+        { name: "播放模式", labels: modeNames }
         { name: "不透明度", labels: ["20%", "40%", "60%", "80%", "100%"] }
         { name: "显示区域", labels: danmakuAreaNames() }
     ]
@@ -50,12 +50,12 @@ end sub
 
 function valueIndex(row as Integer) as Integer
     if row = 0 then
+        if m.top.enabled then return 1
+        return 0
+    else if row = 1 then
         for i = 0 to m.modes.Count() - 1
             if m.modes[i].key = m.top.mode then return i
         end for
-        return 0
-    else if row = 1 then
-        if m.top.enabled then return 1
         return 0
     else if row = 2 then
         return nearestIndex(m.alphas, m.top.alpha)
@@ -72,9 +72,9 @@ sub change(delta as Integer, wrap as Boolean)
         return
     end if
     if m.sel = 0 then
-        m.top.mode = m.modes[i].key
-    else if m.sel = 1 then
         m.top.enabled = (i = 1)
+    else if m.sel = 1 then
+        m.top.mode = m.modes[i].key
     else if m.sel = 2 then
         m.top.alpha = m.alphas[i]
     else

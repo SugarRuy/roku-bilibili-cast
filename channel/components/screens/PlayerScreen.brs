@@ -16,7 +16,8 @@ sub init()
     m.titleLabel.font = cjkFont(42)
     m.subLabel.font = cjkFont(28)
     m.quality.font = cjkFont(30)
-    m.dmHint.font = cjkFont(24)
+    m.dmHint.font = cjkFont(30)
+    m.dmHint.color = accent()
     m.top.findNode("loadingText").font = cjkFont(28)
     m.error.font = cjkFont(32)
     m.spinner.poster.uri = themed("spinner")
@@ -43,6 +44,7 @@ sub init()
 
     ' play mode and danmaku live in the registry; the panel edits them
     m.danmaku.video = m.video
+    m.danmaku.density = loadSetting("dm_density", "normal")
     m.panel.mode = playMode()
     m.panel.enabled = loadSetting("dm_on", "1") = "1"
     m.panel.alpha = Val(loadSetting("dm_alpha", "0.8"))
@@ -81,13 +83,13 @@ end sub
 sub onDanmakuCount()
     n = m.danmaku.count
     m.panel.count = n
-    keys = "上键设置  ·  下键视频列表"
+    keys = "↑ 播放设置    ↓ 选集/推荐"
     if not m.panel.enabled then
-        m.dmHint.text = "弹幕已关闭  ·  " + keys
+        m.dmHint.text = "弹幕 关    " + keys
     else if n > 0 then
-        m.dmHint.text = "弹幕 " + n.ToStr() + " 条  ·  " + keys
+        m.dmHint.text = "弹幕 开    " + keys
     else
-        m.dmHint.text = keys
+        m.dmHint.text = "弹幕 开    " + keys
     end if
 end sub
 
