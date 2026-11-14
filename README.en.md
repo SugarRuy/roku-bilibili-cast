@@ -34,7 +34,7 @@ The interface is in Chinese, as is Bilibili.
 
 ## Install
 
-You need a Roku TV or Roku player and a computer (macOS or Linux) on the same Wi-Fi.
+You need a Roku TV or player and a computer on the same LAN. The script below runs on macOS and Linux.
 
 1. **Enable developer mode on the TV**: on the remote press Home ×3, Up ×2, Right, Left, Right, Left, Right, follow the prompts to enable it, and set a developer password. The screen shows the TV's IP address.
 2. **Get this project** and fill in your TV's details from the project folder:
@@ -51,6 +51,8 @@ You need a Roku TV or Roku player and a computer (macOS or Linux) on the same Wi
    ```
 
    The app opens by itself when the install finishes, and 狗哩狗哩 stays on the Roku home screen. To update after pulling new code, run the same command again.
+
+**Windows or manual installation:** After step 1, download the [v0.1.7 casting ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.1.7/roku-bilibili-cast-v0.1.7.zip), open `http://<the IP shown on your TV>` in a browser, sign in with the Roku developer account, and upload the ZIP. Casting is [experimental](docs/cast.md).
 
 ## Using it
 
