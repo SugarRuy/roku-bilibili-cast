@@ -8,3 +8,7 @@ build/
 tvshowapp/
 *.apk
 *.apk.bak
+tools/node_modules/
+tests/cast/recovery.local.json
+tests/cast/*-results.json
+tests/cast/__pycache__/
