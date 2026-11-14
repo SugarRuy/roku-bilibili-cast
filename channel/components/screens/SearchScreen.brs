@@ -3,6 +3,8 @@ sub init()
     m.sug = m.top.findNode("sug")
     m.sugTitle = m.top.findNode("sugTitle")
     m.grid = m.top.findNode("grid")
+    m.grid.observeField("itemUnfocused", "onGridMotionBegin")
+    m.grid.observeField("itemFocused", "onGridMotion")
     m.resultTitle = m.top.findNode("resultTitle")
     m.message = m.top.findNode("message")
     m.spinner = m.top.findNode("spinner")
@@ -86,7 +88,7 @@ sub onResults(event as Object)
         showMessage("搜索失败：" + res.error)
         return
     end if
-    content = cardsToContent(res.data.items, CreateObject("roSGNode", "ContentNode"))
+    content = event.getRoSGNode().resultContent
     if content.getChildCount() = 0 then
         showMessage("没有找到相关视频")
         return

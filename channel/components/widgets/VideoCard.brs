@@ -6,11 +6,15 @@ sub init()
     m.duration = m.top.findNode("duration")
     m.title = m.top.findNode("title")
     m.meta = m.top.findNode("meta")
+    m.gridText = m.top.findNode("gridText")
+    m.gridText.observeField("loadStatus", "onGridTextStatus", ["uri"])
+    m.failedGridTextUri = ""
     m.scrim = m.top.findNode("scrim")
     m.stats = m.top.findNode("stats")
     m.progressBg = m.top.findNode("progressBg")
     m.progressBar = m.top.findNode("progressBar")
     m.w = 0
+    m.isLive = false
     applyTheme()
     m.global.observeField("theme", "applyTheme")
     layout()
@@ -45,16 +49,17 @@ sub layout()
         metaSize = 20
     end if
     lineH = titleSize + 10
-    m.title.font = cjkFont(titleSize)
+    m.title.font = cardFont(titleSize)
     m.title.width = w
     m.title.translation = [0, h + 12]
-    m.meta.font = cjkFont(metaSize)
+    m.meta.font = cardFont(metaSize)
     m.meta.width = w
     m.meta.translation = [0, h + 18 + lineH * 2]
+    m.gridText.translation = [0, h + 12]
     m.scrim.width = w
     m.scrim.height = 64
     m.scrim.translation = [0, h - 64]
-    m.stats.font = cjkFont(metaSize)
+    m.stats.font = m.meta.font
     m.stats.translation = [12, h - metaSize - 16]
     m.progressBg.translation = [0, h - 6]
     m.progressBg.width = w
@@ -62,12 +67,13 @@ sub layout()
     m.progressBar.translation = [0, h - 6]
     m.progressBar.height = 6
     placeBadge()
+    applyGridText()
 end sub
 
 sub onContent()
     c = m.top.itemContent
     if c = invalid then return
-    m.poster.uri = c.HDPosterUrl
+    if m.poster.uri <> c.HDPosterUrl then m.poster.uri = c.HDPosterUrl
     m.title.text = c.title
     ' history cards say how far you got; the others say when it came out
     meta = c.up
@@ -88,14 +94,16 @@ sub onContent()
     m.scrim.visible = showStats
     ' live rooms say 直播 in the accent colour; the system font has no CJK glyphs
     if c.live then
-        m.duration.font = cjkFont(20)
+        m.duration.font = cardFont(20)
         m.duration.color = accent()
     else
         m.duration.font = "font:SmallestSystemFont"
         m.duration.color = "0xFFFFFFFF"
     end if
     m.duration.text = c.durationText
+    m.isLive = c.live
     placeBadge()
+    applyGridText()
 
     if c.progress > 0 and c.seconds > 0 then
         pct = c.progress / c.seconds
@@ -114,9 +122,13 @@ sub placeBadge()
         m.badge.visible = false
         return
     end if
-    r = m.duration.boundingRect()
-    bw = r.width + 18
-    bh = r.height + 6
+    ' These badges contain only a timestamp or the fixed two-character live
+    ' label. A reserved box avoids forcing text layout during a grid scroll.
+    bw = Len(m.duration.text) * 18 + 18
+    if m.isLive then bw = 62
+    bh = 36
+    m.duration.width = bw - 18
+    m.duration.height = bh - 6
     m.badge.width = bw
     m.badge.height = bh
     m.badge.translation = [m.w - bw - 10, m.h - bh - 12]
@@ -128,9 +140,41 @@ sub onFocus()
     p = 0.0
     if m.top.gridHasFocus or m.top.rowListHasFocus then p = m.top.focusPercent
     m.ring.opacity = p
-    if p > 0.5 then
-        m.title.color = "0xFFFFFFFF"
-    else
-        m.title.color = "0xD2D2DCFF"
+    bright = p > 0.5
+    if m.bright = invalid or bright <> m.bright then
+        m.bright = bright
+        if bright then
+            m.title.color = "0xFFFFFFFF"
+            m.gridText.blendColor = "0xFFFFFFFF"
+        else
+            m.title.color = "0xD2D2DCFF"
+            m.gridText.blendColor = "0xD2D2DCFF"
+        end if
     end if
+end sub
+
+sub applyGridText()
+    c = m.top.itemContent
+    if c = invalid then return
+    uri = strOf(c.gridTextUri)
+    usable = uri <> "" and intOf(c.gridTextWidth) = m.w and uri <> m.failedGridTextUri
+    m.title.visible = not usable
+    m.meta.visible = not usable
+    m.gridText.visible = usable
+    if usable then
+        m.gridText.width = c.gridTextWidth
+        m.gridText.height = c.gridTextHeight
+        m.gridText.loadWidth = c.gridTextWidth
+        m.gridText.loadHeight = c.gridTextHeight
+        if m.gridText.uri <> uri then m.gridText.uri = uri
+    else
+        m.gridText.uri = ""
+    end if
+end sub
+
+sub onGridTextStatus(event as Object)
+    if event.getData() <> "failed" then return
+    if strOf(event.getInfo().uri) <> m.gridText.uri then return
+    m.failedGridTextUri = m.gridText.uri
+    applyGridText()
 end sub

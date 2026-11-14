@@ -18,7 +18,9 @@ sub init()
     m.orders = ["pubdate", "views"]
     m.orderIndex = 0
     m.task = invalid
+    m.loading = false
     m.infoTask = invalid
+    initGridPaging(onItemFocused)
     ' focus (and itemFocused) arrives as soon as the screen is pushed, before `uploader`
     resetList()
     m.grid.observeField("itemSelected", "onItemSelected")
@@ -28,6 +30,8 @@ sub init()
 end sub
 
 sub resetList()
+    if m.content <> invalid then cancelGridPages(m.content)
+    m.gridMoving = false
     m.page = 1
     m.last = false
     m.content = CreateObject("roSGNode", "ContentNode")
@@ -61,23 +65,25 @@ sub loadPage()
     u = m.top.uploader
     if m.last or type(u) <> "roAssociativeArray" then return
     if isNil(u.mid) then return
-    if m.task <> invalid then
-        if m.task.state = "run" then return
-    end if
+    if m.loading then return
+    if gridPagePending(m.content) then return
+    m.loading = true
     m.task = api("upvideos", { mid: strOf(u.mid), page: m.page, order: m.orders[m.orderIndex] }, "onLoaded")
 end sub
 
 sub onLoaded(event as Object)
+    started = CreateObject("roTimespan")
     m.spinner.visible = false
     m.spinner.control = "stop"
     res = event.getData()
     if not res.ok then
+        m.loading = false
         if m.content.getChildCount() = 0 then showMessage("加载失败：" + res.error)
         return
     end if
-    cardsToContent(res.data.items, m.content)
     m.last = boolOf(res.data.last)
     m.page = m.page + 1
+    appendContentPage(event.getRoSGNode().resultContent, m.content)
     if m.content.getChildCount() = 0 then
         showMessage("这位 UP 主还没有投稿")
     else
@@ -85,6 +91,9 @@ sub onLoaded(event as Object)
         m.grid.visible = true
         if m.top.isInFocusChain() and not m.order.isInFocusChain() and not m.grid.hasFocus() then m.grid.setFocus(true)
     end if
+    m.loading = false
+    print "[grid-perf] publish uploader ms="; started.TotalMilliseconds()
+    onItemFocused()
 end sub
 
 sub showMessage(text as String)
@@ -102,6 +111,7 @@ sub onOrder()
     m.orderIndex = i
     if m.task <> invalid then m.task.unobserveField("response")
     m.task = invalid
+    m.loading = false
     resetList()
     m.grid.setFocus(true)
     m.spinner.visible = true
@@ -111,7 +121,8 @@ end sub
 
 ' keep a page ahead of the highlight
 sub onItemFocused()
-    if m.grid.itemFocused >= m.content.getChildCount() - 8 then loadPage()
+    onGridMotion()
+    if m.grid.itemFocused >= m.content.getChildCount() - gridPrefetchDistance(m.grid) then loadPage()
 end sub
 
 sub onItemSelected()

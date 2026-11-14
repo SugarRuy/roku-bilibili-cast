@@ -10,6 +10,8 @@ sub init()
     m.page = 1
     m.last = false
     m.task = invalid
+    m.loading = false
+    initGridPaging(onItemFocused)
     ' focus (and itemFocused) arrives as soon as the screen is pushed, before `folder`
     m.content = CreateObject("roSGNode", "ContentNode")
     m.grid.content = m.content
@@ -29,28 +31,33 @@ sub loadPage()
     f = m.top.folder
     if m.last or type(f) <> "roAssociativeArray" then return
     if isNil(f.id) then return
-    if m.task <> invalid then
-        if m.task.state = "run" then return
-    end if
+    if m.loading then return
+    if gridPagePending(m.content) then return
+    m.loading = true
     m.task = api("favlist", { id: strOf(m.top.folder.id), page: m.page }, "onLoaded")
 end sub
 
 sub onLoaded(event as Object)
+    started = CreateObject("roTimespan")
     m.spinner.visible = false
     m.spinner.control = "stop"
     res = event.getData()
     if not res.ok then
+        m.loading = false
         if m.content.getChildCount() = 0 then showMessage("加载失败：" + res.error)
         return
     end if
-    cardsToContent(res.data.items, m.content)
     m.last = boolOf(res.data.last)
     m.page = m.page + 1
+    appendContentPage(event.getRoSGNode().resultContent, m.content)
     if m.content.getChildCount() = 0 then
         showMessage("这个收藏夹是空的")
     else if m.top.isInFocusChain() and not m.grid.hasFocus() then
         m.grid.setFocus(true)
     end if
+    m.loading = false
+    print "[grid-perf] publish favorites ms="; started.TotalMilliseconds()
+    onItemFocused()
 end sub
 
 sub showMessage(text as String)
@@ -61,7 +68,8 @@ end sub
 
 ' keep a page ahead of the highlight
 sub onItemFocused()
-    if m.grid.itemFocused >= m.content.getChildCount() - 8 then loadPage()
+    onGridMotion()
+    if m.grid.itemFocused >= m.content.getChildCount() - gridPrefetchDistance(m.grid) then loadPage()
 end sub
 
 sub onItemSelected()

@@ -47,6 +47,7 @@ sub init()
     m.cache = {}       ' tab key -> ContentNode
     m.pages = {}       ' tab key -> next page number
     m.tasks = {}
+    initGridPaging(onItemFocused)
     m.historyCursor = {}
     m.historyEnd = false
     m.meInfo = invalid       ' account card data once loaded
@@ -168,6 +169,14 @@ function currentKey() as String
 end function
 
 sub selectTab(i as Integer)
+    ' Stop preparing pictures for a tab the user has left. Its completed
+    ' cached pages remain usable, and an interrupted page can be requested again.
+    previous = currentKey()
+    if i <> m.tabIndex and m.tasks.DoesExist(previous) then
+        m.tasks[previous].unobserveField("response")
+        m.tasks[previous].cancelled = true
+        m.tasks.Delete(previous)
+    end if
     m.tabIndex = i
     paintTabs()
     key = currentKey()
@@ -205,6 +214,10 @@ sub load(key as String, more as Boolean)
         return
     end if
     if m.tasks.DoesExist(key) then return
+    if m.cache.DoesExist(key) then
+        if more and gridPagePending(m.cache[key]) then return
+        if not more then cancelGridPages(m.cache[key])
+    end if
     page = 1
     if more and m.pages.DoesExist(key) then page = m.pages[key]
     op = "home"
@@ -227,28 +240,35 @@ sub load(key as String, more as Boolean)
 end sub
 
 sub onLoaded(event as Object)
+    started = CreateObject("roTimespan")
     task = event.getRoSGNode()
     key = task.tag
-    m.tasks.Delete(key)
+    if not m.tasks.DoesExist(key) then return
+    if not m.tasks[key].isSameNode(task) then return
     res = event.getData()
     if not res.ok then
+        m.tasks.Delete(key)
         if key = currentKey() and not task.more then showMessage("加载失败：" + res.error + Chr(10) + "按 OK 重试")
         return
     end if
-    items = res.data.items
+    page = task.resultContent
     if key = "history" then
         if type(res.data.cursor) = "roAssociativeArray" then m.historyCursor = res.data.cursor
         m.historyEnd = boolOf(res.data.last)
     end if
-    if task.more and m.cache.DoesExist(key) then
-        cardsToContent(items, m.cache[key])
-    else
-        content = cardsToContent(items, CreateObject("roSGNode", "ContentNode"))
-        m.cache[key] = content
-        if key = currentKey() then showContent(content)
-    end if
+    ' Keep the in-flight guard until the page and its next-page number agree:
+    ' assigning content can immediately notify itemFocused.
     m.pages[key] = intOf(m.pages[key]) + 1
     if not task.more then m.pages[key] = 2
+    if task.more and m.cache.DoesExist(key) then
+        appendContentPage(page, m.cache[key])
+    else
+        m.cache[key] = page
+        if key = currentKey() then showContent(page)
+    end if
+    m.tasks.Delete(key)
+    print "[grid-perf] publish home more="; task.more; " ms="; started.TotalMilliseconds()
+    if not task.more and key = currentKey() then onItemFocused()
 end sub
 
 ' ---------- 我的: account card + favourite folders ----------
@@ -338,6 +358,7 @@ sub showContent(content as Object)
     end if
     m.message.visible = false
     m.grid.visible = true
+    m.gridMoving = false
     m.grid.content = content
     m.grid.jumpToItem = 0
 end sub
@@ -374,16 +395,23 @@ sub refresh()
         showMe()
         return
     end if
+    if m.cache.DoesExist(key) then cancelGridPages(m.cache[key])
+    if m.tasks.DoesExist(key) then
+        m.tasks[key].unobserveField("response")
+        m.tasks[key].cancelled = true
+        m.tasks.Delete(key)
+    end if
     m.cache.Delete(key)
     load(key, false)
 end sub
 
 sub onItemFocused()
+    onGridMotion()
     key = currentKey()
     if key <> "rcmd" and key <> "popular" and key <> "history" and key <> "live" then return
     content = m.grid.content
     if content = invalid then return
-    if m.grid.itemFocused >= content.getChildCount() - 8 then load(key, true)
+    if m.grid.itemFocused >= content.getChildCount() - gridPrefetchDistance(m.grid) then load(key, true)
 end sub
 
 sub onItemSelected()
