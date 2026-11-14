@@ -49,13 +49,25 @@ python scripts/push.py BV1xx411c7mD --roku-ip 192.168.1.177
 
 **仍无永久常驻保证。** 频道被系统回收后接收器也会消失。长期待机、内存压力、其他系统版本及两种手机平台的分别验收仍待完成。Roku 不再支持应用内 ECP 调用；本机 DIAL 在实机可用，不代表获得商店发布许可。当前证据支持评估将其作为实验功能合并，但不等于完成稳定版或商店发布验收。
 
-### 电视重启后的启动
+### 电视重启后的启动：重新调查
 
-当前实现需要在电视系统重启后手动打开频道一次。遥控器关机进入 `Ready` 待机的实测，与系统重启、断电重新启动是不同场景。
+遥控器关机进入 `Ready` 待机、返回 Roku 首页、系统菜单里的「系统重启」是三种不同状态。前两种已经在本机验证；真正重启后接收器是否启动，尚未做实机验收。本轮调查期间电视正在播放，因此只进行了不会打断播放的网络读取。
 
-[Instant Resume 官方说明](https://developer.roku.com/dev/docs/instant-resume)明确将状态保存在 RAM 中，并允许系统在需要内存时回收频道。由此不能把 Instant Resume 当作跨重启保存接收器或开机启动服务的机制。2026-11-14 检查[公开 manifest 属性](https://developer.roku.com/dev/docs/channel-manifest)，未找到普通频道可注册的开机后台任务入口；`dial_title` 注册的是由外部请求触发的启动入口。
+2026-11-14 在 M302X / Roku OS 16.0.4 向电视搜索不同的 SSDP 类型，实际收到：
 
-文档列出的 USB 插入自动启动，以及[屏保的闲置启动](https://developer.roku.com/dev/docs/screensavers)，都有额外触发条件，不能据此声称已实现重启后的后台自启。公开屏保规范目前还要求独立屏保应用，禁止将屏保打包进视频应用。没有实现或部署这些替代实验，也尚未做此次后台分支的系统重启恢复验收。
+| 请求类型 | Roku 系统回应 | 本频道接收器回应 |
+| --- | --- | --- |
+| `upnp:rootdevice` | `:8060/` | `:9958/description.xml` |
+| `urn:app-bilibili-com:service:NirvanaControl:3` | 无 | `:9958/description.xml` |
+| `urn:dial-multiscreen-org:service:dial:1` | `:8060/dial/dd.xml` | 无 |
+
+Roku 系统的 `:8060/` 描述了 ECP 和 DIAL，但没有 `MediaRenderer` 或 `NirvanaControl`；本频道的 `:9958/description.xml` 才提供这些 B 站手机端实际访问过的服务。系统**有** `upnp:rootdevice` 发现入口，却没有直接提供所需的 B 站接收协议。此前手机真实投屏依次访问本频道的描述、`GetAppInfo` 和 NVA `Play`，因此仅添加 `dial_title` 尚不能证明手机会在频道冷启动前发现它。手机是否存在另一个未观察到的 DIAL 路径，需要在没有 `:9958` 接收器时单独验证。
+
+[Manifest 官方文档](https://developer.roku.com/dev/docs/channel-manifest)列出的 `dial_title` 把频道注册到系统 DIAL，由**知道 DIAL 应用名的外部发送方**发起启动；`usb_media_handler` 只针对 USB 设备插入。没有找到普通频道可注册的开机后台任务。[Instant Resume 官方文档](https://developer.roku.com/dev/docs/instant-resume)说明它保留的是设备 RAM 中的进程，也可能因内存压力被回收；文档还写明后台任务在挂起五秒后被阻塞。本机实验曾观察到任务在挂起超过两分钟后继续响应，这说明当前固件上的行为与文档不一致，不能把实验现象当作重启后自动启动的保证。
+
+[Roku 屏保](https://developer.roku.com/dev/docs/screensavers)会在用户设定的闲置时间后自动运行，是一个可进一步实验的电视端触发器；它不会在重启瞬间启动，而且官方要求屏保独立成应用，禁止将屏保打包进视频应用。即使做独立屏保，也必须验证其接收器在屏保退出后能否继续工作，否则不能满足「任何时候从手机投屏」的目标。留置 USB 设备则要验证重启时是否会产生插入事件，还会把视频应用带到前台，不能视为静默开机服务。
+
+目前最有价值的下一项实测是 **DIAL 单独发现**：在电视空闲时暂时部署只有 `dial_title`、没有 `:9958` 发现服务的测试包，重启后记录 B 站手机投屏列表和访问路径。若手机主动查询相应的 DIAL 应用名，就可利用 Roku 系统的启动入口；若仍只查询 `NirvanaControl`，普通侧载频道在冷启动前缺少 B 站服务，需 Roku 系统级支持才能做到无额外设备的即时投屏。实验后恢复当前可用包。本轮没有打断正在播放的电视，也没有运行该实验。
 
 独立诊断记录见 [网络生命周期实验](../experiments/lifecycle-probe/README.md)。真实接收器回归：
 
