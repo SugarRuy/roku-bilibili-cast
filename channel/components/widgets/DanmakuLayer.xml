@@ -7,6 +7,12 @@
     <field id="cid" type="string" onChange="onCid" />
     <field id="enabled" type="boolean" value="false" onChange="onEnabled" />
     <field id="density" type="string" value="normal" onChange="onDensity" />
+    <field id="size" type="string" value="normal" onChange="onSize" />
+    <field id="speed" type="string" value="normal" onChange="onSpeed" />
+    <field id="scrollEnabled" type="boolean" value="true" onChange="onFilter" />
+    <field id="topEnabled" type="boolean" value="true" onChange="onFilter" />
+    <field id="bottomEnabled" type="boolean" value="true" onChange="onFilter" />
+    <field id="keywords" type="array" onChange="onFilter" />
     <field id="area" type="float" value="0.5" onChange="onArea" />
     <field id="count" type="integer" />
   </interface>

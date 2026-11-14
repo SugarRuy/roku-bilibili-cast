@@ -10,6 +10,7 @@ sub init()
     m.hudTimer = m.top.findNode("hudTimer")
     m.danmaku = m.top.findNode("danmaku")
     m.panel = m.top.findNode("panel")
+    m.keywordEditor = m.top.findNode("keywordEditor")
     m.list = m.top.findNode("list")
     m.dmHint = m.top.findNode("dmHint")
 
@@ -44,16 +45,34 @@ sub init()
 
     ' play mode and danmaku live in the registry; the panel edits them
     m.danmaku.video = m.video
-    m.danmaku.density = loadSetting("dm_density", "normal")
+    m.keywords = storedKeywords()
+    m.danmaku.keywords = m.keywords
     m.panel.mode = playMode()
     m.panel.enabled = loadSetting("dm_on", "1") = "1"
     m.panel.alpha = Val(loadSetting("dm_alpha", "0.8"))
     m.panel.area = Val(loadSetting("dm_area", "0.5"))
+    m.panel.density = loadSetting("dm_density", "normal")
+    m.panel.size = loadSetting("dm_size", "normal")
+    m.panel.speed = loadSetting("dm_speed", "normal")
+    m.panel.scrollEnabled = loadSetting("dm_scroll", "1") = "1"
+    m.panel.topEnabled = loadSetting("dm_top", "1") = "1"
+    m.panel.bottomEnabled = loadSetting("dm_bottom", "1") = "1"
+    m.panel.keywordCount = m.keywords.Count()
     applyDanmakuSettings()
     m.panel.observeField("mode", "onPanelSettings")
     m.panel.observeField("enabled", "onPanelSettings")
     m.panel.observeField("alpha", "onPanelSettings")
     m.panel.observeField("area", "onPanelSettings")
+    m.panel.observeField("density", "onPanelSettings")
+    m.panel.observeField("size", "onPanelSettings")
+    m.panel.observeField("speed", "onPanelSettings")
+    m.panel.observeField("scrollEnabled", "onPanelSettings")
+    m.panel.observeField("topEnabled", "onPanelSettings")
+    m.panel.observeField("bottomEnabled", "onPanelSettings")
+    m.panel.observeField("keywordRequested", "openKeywordEditor")
+    m.panel.observeField("listRequested", "onPanelList")
+    m.keywordEditor.observeField("updated", "onKeywordsUpdated")
+    m.keywordEditor.observeField("closed", "closeKeywordEditor")
     m.panel.observeField("closed", "closePanel")
     m.list.observeField("chosen", "onListChosen")
     m.list.observeField("closed", "closeList")
@@ -62,22 +81,77 @@ sub init()
 end sub
 
 sub applyDanmakuSettings()
-    m.danmaku.enabled = m.panel.enabled
-    m.danmaku.opacity = m.panel.alpha
-    m.danmaku.area = m.panel.area
+    if m.danmaku.density <> m.panel.density then m.danmaku.density = m.panel.density
+    if m.danmaku.size <> m.panel.size then m.danmaku.size = m.panel.size
+    if m.danmaku.speed <> m.panel.speed then m.danmaku.speed = m.panel.speed
+    if m.danmaku.area <> m.panel.area then m.danmaku.area = m.panel.area
+    if m.danmaku.scrollEnabled <> m.panel.scrollEnabled then m.danmaku.scrollEnabled = m.panel.scrollEnabled
+    if m.danmaku.topEnabled <> m.panel.topEnabled then m.danmaku.topEnabled = m.panel.topEnabled
+    if m.danmaku.bottomEnabled <> m.panel.bottomEnabled then m.danmaku.bottomEnabled = m.panel.bottomEnabled
+    if m.danmaku.opacity <> m.panel.alpha then m.danmaku.opacity = m.panel.alpha
+    if m.danmaku.enabled <> m.panel.enabled then m.danmaku.enabled = m.panel.enabled
 end sub
 
-sub onPanelSettings()
+function storedKeywords() as Object
+    words = ParseJson(loadSetting("dm_keywords", "[]"))
+    if type(words) <> "roArray" then return []
+    result = []
+    for each word in words
+        if type(word) = "roString" and word <> "" then result.Push(word)
+        if result.Count() >= 20 then exit for
+    end for
+    return result
+end function
+
+sub onPanelSettings(event as Object)
     applyDanmakuSettings()
-    saveSetting("play_mode", m.panel.mode)
-    if m.panel.enabled then
-        saveSetting("dm_on", "1")
-    else
-        saveSetting("dm_on", "0")
+    field = event.getField()
+    if field = "mode" then saveSetting("play_mode", m.panel.mode)
+    if field = "enabled" then
+        value = "0"
+        if m.panel.enabled then value = "1"
+        saveSetting("dm_on", value)
     end if
-    saveSetting("dm_alpha", Str(m.panel.alpha).Trim())
-    saveSetting("dm_area", Str(m.panel.area).Trim())
+    if field = "alpha" then saveSetting("dm_alpha", Str(m.panel.alpha).Trim())
+    if field = "area" then saveSetting("dm_area", Str(m.panel.area).Trim())
+    if field = "density" then saveSetting("dm_density", m.panel.density)
+    if field = "size" then saveSetting("dm_size", m.panel.size)
+    if field = "speed" then saveSetting("dm_speed", m.panel.speed)
+    if field = "scrollEnabled" then saveSetting("dm_scroll", boolSetting(m.panel.scrollEnabled))
+    if field = "topEnabled" then saveSetting("dm_top", boolSetting(m.panel.topEnabled))
+    if field = "bottomEnabled" then saveSetting("dm_bottom", boolSetting(m.panel.bottomEnabled))
     onDanmakuCount()
+end sub
+
+function boolSetting(value as Boolean) as String
+    if value then return "1"
+    return "0"
+end function
+
+sub onPanelList()
+    closePanel()
+    openList()
+end sub
+
+sub openKeywordEditor()
+    m.keywordWasPlaying = m.video.state = "playing"
+    if m.keywordWasPlaying then m.video.control = "pause"
+    m.keywordEditor.keywords = m.keywords
+    m.keywordEditor.visible = true
+    m.keywordEditor.setFocus(true)
+end sub
+
+sub onKeywordsUpdated()
+    m.keywords = m.keywordEditor.updated
+    saveSetting("dm_keywords", FormatJson(m.keywords))
+    m.danmaku.keywords = m.keywords
+    m.panel.keywordCount = m.keywords.Count()
+end sub
+
+sub closeKeywordEditor()
+    m.keywordEditor.visible = false
+    m.panel.setFocus(true)
+    if m.keywordWasPlaying and m.video.state = "paused" then m.video.control = "resume"
 end sub
 
 sub onDanmakuCount()
