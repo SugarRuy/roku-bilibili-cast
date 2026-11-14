@@ -42,6 +42,14 @@ sub init()
     m.related = []
     m.played = {}
     m.castReleased = false
+    m.playSerial = 0
+    m.pendingQuality = false
+    m.switchingPlayback = false
+    m.qualityResumePending = false
+    m.pauseAfterStart = false
+    m.qualityChoice = loadSetting("vod_quality", "auto")
+    m.appliedQualityChoice = m.qualityChoice
+    m.suppressQualityChoice = false
 
     ' play mode and danmaku live in the registry; the panel edits them
     m.danmaku.video = m.video
@@ -58,6 +66,7 @@ sub init()
     m.panel.topEnabled = loadSetting("dm_top", "1") = "1"
     m.panel.bottomEnabled = loadSetting("dm_bottom", "1") = "1"
     m.panel.keywordCount = m.keywords.Count()
+    m.panel.qualityChoice = m.qualityChoice
     applyDanmakuSettings()
     m.panel.observeField("mode", "onPanelSettings")
     m.panel.observeField("enabled", "onPanelSettings")
@@ -71,6 +80,7 @@ sub init()
     m.panel.observeField("bottomEnabled", "onPanelSettings")
     m.panel.observeField("keywordRequested", "openKeywordEditor")
     m.panel.observeField("listRequested", "onPanelList")
+    m.panel.observeField("qualityChoice", "onQualityChoice")
     m.keywordEditor.observeField("updated", "onKeywordsUpdated")
     m.keywordEditor.observeField("closed", "closeKeywordEditor")
     m.panel.observeField("closed", "closePanel")
@@ -131,6 +141,29 @@ end function
 sub onPanelList()
     closePanel()
     openList()
+end sub
+
+sub onQualityChoice()
+    if m.suppressQualityChoice then return
+    choice = m.panel.qualityChoice
+    if choice = m.qualityChoice then return
+    m.qualityChoice = choice
+    saveSetting("vod_quality", choice)
+    if m.req = invalid or m.part = invalid then return
+    m.pendingQuality = m.video.state = "playing" or m.video.state = "paused"
+    if m.pendingQuality then m.qualityFromChoice = m.appliedQualityChoice
+    requestStream("auto")
+end sub
+
+sub restoreQualityChoice()
+    choice = strOf(m.qualityFromChoice)
+    if choice = "" then choice = "auto"
+    m.qualityChoice = choice
+    m.appliedQualityChoice = choice
+    saveSetting("vod_quality", choice)
+    m.suppressQualityChoice = true
+    m.panel.qualityChoice = choice
+    m.suppressQualityChoice = false
 end sub
 
 sub openKeywordEditor()
@@ -323,6 +356,10 @@ sub startPart(index as Integer, startAt as Integer, fmt as String)
     m.index = index
     m.startAt = startAt
     m.fmt = fmt
+    m.pendingQuality = false
+    m.switchingPlayback = false
+    m.qualityResumePending = false
+    m.lastPlayData = invalid
     m.part = m.req.pages[index]
     m.lastSaved = startAt
     m.video.control = "stop"
@@ -334,19 +371,52 @@ sub startPart(index as Integer, startAt as Integer, fmt as String)
     m.subLabel.text = line
     m.danmaku.cid = strOf(m.part.cid)
     if m.req.pages.Count() > 1 then buildList()   ' moves the ▶ marker
-    m.playTask = api("play", { bvid: m.req.bvid, cid: strOf(m.part.cid), fmt: fmt }, "onPlay", strOf(m.req.castGeneration))
+    requestStream(fmt)
+end sub
+
+sub requestStream(fmt as String)
+    if m.playTask <> invalid then m.playTask.cancelled = true
+    m.playSerial = m.playSerial + 1
+    m.playTask = api("play", { bvid: m.req.bvid, cid: strOf(m.part.cid), fmt: fmt, quality: m.qualityChoice }, "onPlay", m.playSerial.ToStr())
 end sub
 
 sub onPlay(event as Object)
     if m.castReleased then return
+    if event.getRoSGNode().tag <> m.playSerial.ToStr() then return
     res = event.getData()
     if not res.ok then
+        if m.pendingQuality then
+            m.pendingQuality = false
+            restoreQualityChoice()
+            navigate({ action: "toast", text: "画质切换失败：" + res.error })
+            return
+        end if
         showError("无法获取播放地址：" + res.error)
         return
     end if
     d = res.data
+    if m.pendingQuality then
+        m.pendingQuality = false
+        m.qualityBackup = m.lastPlayData
+        m.pauseAfterStart = m.video.state = "paused"
+        m.startAt = Int(m.video.position)
+        m.switchingPlayback = true
+        m.qualityResumePending = m.startAt > 2
+    end if
+    applyPlayData(d, m.startAt)
+    m.lastPlayData = d
+    m.panel.qualities = d.qualities
+    m.panel.actualQuality = strOf(d.quality_name)
+    m.appliedQualityChoice = m.qualityChoice
+    if m.qualityChoice <> "auto" and intOf(m.qualityChoice) <> intOf(d.quality) then
+        navigate({ action: "toast", text: "此视频使用 " + strOf(d.quality_name) })
+    end if
+end sub
+
+sub applyPlayData(d as Object, startAt as Integer)
     m.format = strOf(d.format)
     m.quality.text = strOf(d.quality_name)
+    if m.qualityChoice = "auto" and m.format = "dash" then m.quality.text = "自动 · 最高 " + strOf(d.quality_name)
     if m.format = "dash" then
         ' the loopback server hands this manifest to the player
         m.global.mpd = d.mpd
@@ -356,7 +426,7 @@ sub onPlay(event as Object)
     c.url = strOf(d.url)
     c.streamFormat = m.format
     c.HttpHeaders = d.headers
-    if m.startAt > 0 then c.PlayStart = m.startAt
+    if startAt > 0 then c.PlayStart = startAt
     m.video.content = c
     m.video.control = "play"
     if not m.list.visible and not m.panel.visible then m.video.setFocus(true)
@@ -369,6 +439,14 @@ sub onState()
     s = m.video.state
     if s = "playing" then
         m.loading.visible = false
+        if m.pauseAfterStart then
+            m.pauseAfterStart = false
+            m.video.control = "pause"
+        end if
+        if m.switchingPlayback and not m.qualityResumePending then
+            m.switchingPlayback = false
+            m.qualityBackup = invalid
+        end if
         if not m.shownOnce then
             m.shownOnce = true
             showHud(true)
@@ -377,6 +455,19 @@ sub onState()
         showHud(false)
     else if s = "error" then
         secs = Int(m.video.position)
+        if m.switchingPlayback and m.qualityBackup <> invalid then
+            m.switchingPlayback = false
+            m.qualityResumePending = false
+            backup = m.qualityBackup
+            m.qualityBackup = invalid
+            restoreQualityChoice()
+            applyPlayData(backup, m.startAt)
+            m.lastPlayData = backup
+            m.panel.qualities = backup.qualities
+            m.panel.actualQuality = strOf(backup.quality_name)
+            navigate({ action: "toast", text: "新画质播放失败，已恢复原画质" })
+            return
+        end if
         ' DASH is the 1080P path; if this TV chokes on it, the progressive MP4 still plays
         if m.format = "dash" then
             print "[player] dash failed ("; m.video.errorCode; ") "; m.video.errorMsg; " -> retry mp4"
@@ -410,6 +501,18 @@ end sub
 
 sub onPosition()
     if m.castReleased then return
+    if m.qualityResumePending then
+        ' Roku may seek to the preceding DASH keyframe. Only hide the transient
+        ' zero position; waiting for an exact timestamp could stall cast status.
+        if m.video.position < 1 then
+            publishCastState()
+            return
+        end if
+        m.qualityResumePending = false
+        m.switchingPlayback = false
+        m.qualityBackup = invalid
+        print "[quality] resumed target="; m.startAt; " actual="; m.video.position
+    end if
     publishCastState()
     secs = Int(m.video.position)
     if Abs(secs - m.lastSaved) >= 15 then save(false)

@@ -35,6 +35,7 @@ sub init()
     m.top.observeField("visible", "onVisible")
     m.top.observeField("qualities", "paint")
     m.top.observeField("qualityChoice", "paint")
+    m.top.observeField("actualQuality", "paint")
     m.top.observeField("count", "paint")
     paint()
 end sub
@@ -119,7 +120,7 @@ function choiceLabel(key as String) as String
                 if strOf(q.qn) = m.top.qualityChoice then return strOf(q.name) + "  ›"
             end for
         end if
-        return "自动  ›"
+        return m.top.actualQuality + "  ›"
     end if
     if Left(key, 2) = "q:" then
         if Mid(key, 3) = m.top.qualityChoice then return "✓"

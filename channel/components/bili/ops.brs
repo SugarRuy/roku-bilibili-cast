@@ -237,6 +237,8 @@ end function
 ' so DASH is only worth it with a session (1080P).
 function opPlay(p as Object) as Object
     fmt = strOf(p.fmt)
+    choice = strOf(p.quality)
+    if choice = "" then choice = "auto"
     if fmt = "" or fmt = "auto" then
         if isLoggedIn() and m.global.mpdPort > 0 then
             fmt = "dash"
@@ -249,13 +251,25 @@ function opPlay(p as Object) as Object
     cid = strOf(p.cid)
 
     if fmt = "mp4" then
-        r = biliApi(apiBase() + "/x/player/wbi/playurl", { bvid: bvid, cid: cid, qn: 64, fnval: 1, fnver: 0, fourk: 1, platform: "pc", high_quality: 1 }, true)
+        asked = 64
+        if choice <> "auto" then asked = intOf(choice)
+        if asked > 64 then asked = 64
+        if asked < 16 then asked = 16
+        r = biliApi(apiBase() + "/x/player/wbi/playurl", { bvid: bvid, cid: cid, qn: asked, fnval: 1, fnver: 0, fourk: 1, platform: "pc", high_quality: 1 }, true)
         if not r.ok then return fail(r.error)
         durl = r.data.durl
         if type(durl) <> "roArray" then return fail("这个视频没有 MP4 版本")
         if durl.Count() = 0 then return fail("这个视频没有 MP4 版本")
         q = intOf(r.data.quality)
-        return okWith({ format: "mp4", url: strOf(durl[0].url), headers: mediaHeaders(), quality: q, quality_name: qualityName(q, 0) })
+        qualities = []
+        if type(r.data.accept_quality) = "roArray" then
+            for each offered in r.data.accept_quality
+                id = intOf(offered)
+                if id >= 16 and id <= 64 then qualities.Push({ qn: id, name: qualityName(id, 0) })
+            end for
+        end if
+        if qualities.Count() = 0 then qualities.Push({ qn: q, name: qualityName(q, 0) })
+        return okWith({ format: "mp4", url: strOf(durl[0].url), headers: mediaHeaders(), quality: q, quality_name: qualityName(q, 0), qualities: qualities })
     end if
 
     r = biliApi(apiBase() + "/x/player/wbi/playurl", { bvid: bvid, cid: cid, qn: 80, fnval: 4048, fnver: 0, fourk: 1, platform: "pc", high_quality: 1 }, true)
@@ -264,18 +278,32 @@ function opPlay(p as Object) as Object
     if type(dash) <> "roAssociativeArray" then return fail("这个视频没有 DASH 版本")
     tracks = selectTracks(dash)
     if tracks = invalid then return fail("没有电视能播放的码流")
-    top = tracks.videos[tracks.videos.Count() - 1]
+    qualities = []
+    for i = tracks.videos.Count() - 1 to 0 step -1
+        video = tracks.videos[i]
+        qualities.Push({ qn: video.qid, name: qualityName(video.qid, video.height) })
+    end for
+    chosen = tracks.videos[tracks.videos.Count() - 1]
+    if choice <> "auto" then
+        asked = intOf(choice)
+        chosen = tracks.videos[0]
+        for each video in tracks.videos
+            if video.qid <= asked and video.qid >= chosen.qid then chosen = video
+        end for
+        tracks.videos = [chosen]
+    end if
     duration = intOf(dash.duration)
     if duration <= 0 then duration = intOf(r.data.timelength) \ 1000
-    sid = bvid + "-" + cid + "-" + CreateObject("roDateTime").AsSeconds().ToStr()
+    sid = bvid + "-" + cid + "-" + CreateObject("roDateTime").AsSeconds().ToStr() + "-" + Rnd(1000000).ToStr()
     return okWith({
         format: "dash"
         sid: sid
         mpd: buildMpd(tracks, duration)
         url: "http://127.0.0.1:" + m.global.mpdPort.ToStr() + "/" + sid + ".mpd"
         headers: mediaHeaders()
-        quality: top.qid
-        quality_name: qualityName(top.qid, top.height)
+        quality: chosen.qid
+        quality_name: qualityName(chosen.qid, chosen.height)
+        qualities: qualities
     })
 end function
 
