@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ProbeScene" extends="Scene">
+  <customization suspendhandler="customSuspend" />
+  <customization resumehandler="customResume" />
+  <script type="text/brightscript" uri="ProbeScene.brs" />
+  <children>
+    <Rectangle width="1920" height="1080" color="0x101820FF" />
+    <Label text="Roku network lifecycle experiment" translation="[100,140]" width="1720" height="100" />
+    <Label text="Testing TCP and UDP after Home / standby." translation="[100,280]" width="1720" height="100" />
+    <ProbeTask id="probe" />
+  </children>
+</component>
