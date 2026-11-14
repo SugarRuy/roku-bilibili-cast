@@ -1,0 +1,10 @@
+title=Roku network lifecycle probe
+major_version=0
+minor_version=0
+build_version=1
+ui_resolutions=fhd
+splash_color=#101820
+sdk_instant_resume=1
+run_as_process=1
+dial_title=RokuLifecycleProbe
+supports_input_launch=1

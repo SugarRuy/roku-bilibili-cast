@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- Root scene: a stack of screens plus a toast. Screens navigate by setting `nav`. -->
 <component name="MainScene" extends="Scene">
+  <customization suspendhandler="suspendForCast" />
+  <customization resumehandler="resumeForCast" />
   <interface>
     <field id="nav" type="assocarray" alwaysNotify="true" onChange="onRoute" />
     <field id="deeplink" type="assocarray" alwaysNotify="true" onChange="onDeeplink" />
