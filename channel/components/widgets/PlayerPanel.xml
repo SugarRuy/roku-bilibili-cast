@@ -15,6 +15,7 @@
     <field id="keywordCount" type="integer" />
     <field id="qualities" type="array" />
     <field id="qualityChoice" type="string" value="auto" />
+    <field id="actualQuality" type="string" />
     <field id="keywordRequested" type="boolean" alwaysNotify="true" />
     <field id="listRequested" type="boolean" alwaysNotify="true" />
     <field id="interactionRequested" type="boolean" alwaysNotify="true" />
