@@ -1,0 +1,50 @@
+name: Publish Roku package
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    # The main-branch trigger bootstraps v0.1.7; future tags trigger releases.
+    paths: ['.github/workflows/publish-release.yml']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag
+        required: true
+        default: v0.1.7
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.repository == 'SugarRuy/roku-bilibili-cast'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || 'v0.1.7' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build the tagged channel
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            git checkout --detach "$RELEASE_TAG"
+          else
+            # v0.1.7 predates this workflow; package only if channel/ is identical.
+            git diff --exit-code "$RELEASE_TAG" HEAD -- channel
+          fi
+          python3 scripts/package.py "build/roku-bilibili-cast-${RELEASE_TAG}.zip"
+      - name: Create prerelease with installable ZIP
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists"
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" "build/roku-bilibili-cast-${RELEASE_TAG}.zip" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --prerelease \
+            --title "狗哩狗哩投屏测试 $RELEASE_TAG" \
+            --notes-file docs/cast.md
