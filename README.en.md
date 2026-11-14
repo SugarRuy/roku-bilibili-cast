@@ -1,11 +1,14 @@
-# 狗哩狗哩 (Gouli Gouli) — a Bilibili client for Roku
+# Roku小电视 (Roku Little TV) — a Bilibili client for Roku
 
 [中文](README.md) | English
+
+![Roku小电视](channel/images/icon_focus_fhd.png)
 
 Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itself** — no computer or server has to stay on; you only need a computer to install it the first time and to update it later.
 
 > `main` includes new player settings and experimental background casting, with no new release yet.
 > The v0.1.7 download below does not include these additions. See the [implementation and validation status](docs/player-controls-plan.md) (Chinese).
+> `main` now uses the Roku小电视 name and new artwork; historical downloads still use the previous branding.
 
 - Home: recommended, popular and ranking, with every video's publish date
 - Live streams: when you are logged in, the streamers you follow come first while they are live; switch quality from the remote
@@ -21,11 +24,13 @@ Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itsel
 - Watch progress syncs with your Bilibili account both ways: stop on the TV and continue on your phone, or the other way round
 - Multi-part videos, related videos, resume playback
 - Cast from a video's playback page in the Bilibili mobile app on the same LAN; after opening the TV app once, casting can bring it back while its receiver process survives. Open the app again after a system reboot (experimental; [usage and limits](docs/cast.md)).
-- Theme colour (yellow / pink / blue / green / purple) and font (Kai / Hei / Song) in Settings
+- Theme colour (pink / yellow / blue / green / purple) and font (Hei / Kai / Song) in Settings; pink and Hei are the defaults
 
 The interface is in Chinese, as is Bilibili.
 
 ## Screenshots
+
+These screenshots show the previous name and artwork.
 
 | Home | Video page |
 | --- | --- |
@@ -55,7 +60,7 @@ You need a Roku TV or player and a computer on the same LAN. The script below ru
    scripts/deploy.sh
    ```
 
-   The app opens by itself when the install finishes, and 狗哩狗哩 stays on the Roku home screen. To update after pulling new code, run the same command again.
+   The app opens by itself when the install finishes, and Roku小电视 stays on the Roku home screen. To update after pulling new code, run the same command again.
 
 **Windows or manual installation:** After step 1, download the [v0.1.7 casting ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.1.7/roku-bilibili-cast-v0.1.7.zip), open `http://<the IP shown on your TV>` in a browser, sign in with the Roku developer account, and upload the ZIP. Casting is [experimental](docs/cast.md).
 
@@ -97,6 +102,13 @@ Open 我的 and scan the QR code on screen with the Bilibili phone app, then con
 
 Once you are logged in, watch progress syncs with your account: what you watch on the TV shows up in your phone's history, and a video you half-watched on another device continues from there when you open it on the TV.
 
-## Fonts
+## Theme and fonts
+
+Pink is the default theme colour. Change it under Settings → Theme colour.
+Updates preserve a saved colour choice; an unset or invalid choice falls back to pink.
+
+Hei (Noto Sans SC) is the default. Choose Kai or Song under Settings → Font.
+Updates preserve a saved font choice; an unset or invalid choice falls back to Hei.
+The home-screen tile retains the supplied artwork, so its image text does not change with the interface font.
 
 The interface uses subsets of LXGW WenKai, Noto Sans SC and Source Han Serif, all under the SIL Open Font License 1.1; the licences are in [`channel/fonts/`](channel/fonts/).

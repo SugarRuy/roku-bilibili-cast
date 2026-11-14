@@ -3,68 +3,21 @@
     tools/.venv/bin/python scripts/make-art.py
 """
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+from make_branding import render_branding
 
 OUT = Path(__file__).resolve().parent.parent / "channel" / "images"
 OUT.mkdir(parents=True, exist_ok=True)
 BG = (15, 15, 20)
 # accent colours, keyed like themes() in channel/components/common/utils.brs; the first is the default
 THEMES = {
-    "yellow": (255, 201, 60),
     "pink": (251, 114, 153),
+    "yellow": (255, 201, 60),
     "blue": (61, 139, 253),
     "green": (52, 211, 153),
     "purple": (155, 123, 255),
 }
-CJK = "/System/Library/Fonts/Hiragino Sans GB.ttc"
-
-
-# the 狗哩狗哩 mascot: a hand-drawn white puppy with a transparent background
-PUPPY = Path(__file__).resolve().parent.parent / "art" / "puppy.png"
-
-
-def dog(size: int, grey=False) -> Image.Image:
-    """The mascot cropped to its drawing and fitted into a size x size square;
-    grey gives the dimmed version used for missing thumbnails."""
-    art = Image.open(PUPPY).convert("RGBA")
-    art = art.crop(art.getbbox())
-    scale = size / max(art.size)
-    art = art.resize((max(1, round(art.width * scale)), max(1, round(art.height * scale))), Image.LANCZOS)
-    if grey:
-        lum = art.convert("L").point(lambda v: 40 + v * 48 // 255)
-        art = Image.merge("RGBA", (lum, lum, lum.point(lambda v: v + 10), art.getchannel("A")))
-    square = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    square.paste(art, ((size - art.width) // 2, (size - art.height) // 2), art)
-    return square
-
-
-def paste_centered(canvas: Image.Image, art: Image.Image, cx: int, cy: int):
-    canvas.paste(art, (cx - art.width // 2, cy - art.height // 2), art)
-
-
-def poster(size):
-    w, h = size
-    img = Image.new("RGB", size, BG)
-    d = ImageDraw.Draw(img)
-    paste_centered(img, dog(int(h * 0.62)), w // 2, int(h * 0.38))
-    font = ImageFont.truetype(CJK, int(h * 0.15), index=1)
-    text = "狗哩狗哩"
-    tw = d.textlength(text, font=font)
-    d.text(((w - tw) / 2, int(h * 0.72)), text, font=font, fill=(240, 240, 245))
-    return img
-
-
-poster((540, 405)).save(OUT / "icon_focus_fhd.png")
-poster((290, 218)).save(OUT / "icon_focus_hd.png")
-
-splash = Image.new("RGB", (1920, 1080), BG)
-d = ImageDraw.Draw(splash)
-paste_centered(splash, dog(420), 960, 450)
-font = ImageFont.truetype(CJK, 64, index=1)
-t = "狗哩狗哩"
-d.text(((1920 - d.textlength(t, font=font)) / 2, 700), t, font=font, fill=(240, 240, 245))
-splash.save(OUT / "splash_fhd.jpg", quality=90)
-print("art ->", OUT)
+render_branding()
 
 
 # ---------- UI chrome ----------
@@ -103,15 +56,6 @@ nine_patch(rounded((32, 32), 8, fill=(0, 0, 0, 170)), (12, 20), (12, 20), "badge
 nine_patch(rounded((40, 40), 12, fill=(28, 28, 36, 255)), (16, 24), (16, 24), "card.9.png")
 
 Image.new("RGBA", (4, 4), (0, 0, 0, 0)).save(OUT / "clear.png")
-
-ph = Image.new("RGB", (480, 270), (28, 28, 36))
-paste_centered(ph, dog(170, grey=True), 240, 135)
-ph.save(OUT / "placeholder.png")
-
-logo = Image.new("RGBA", (96, 80), (0, 0, 0, 0))
-paste_centered(logo, dog(80), 48, 40)
-logo.save(OUT / "logo.png")
-
 
 # left-to-right scrim for the detail page backdrop, top scrim for the player HUD
 scrim = Image.new("RGBA", (480, 4), (0, 0, 0, 0))

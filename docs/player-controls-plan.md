@@ -73,4 +73,9 @@
 
 ## 提交组织
 
-按功能分支和提交推进：`fix/danmaku-rendering`、`feature/danmaku-controls`、`feature/player-quality`；倍速验证结果单独记录。每个功能先在开发者安装版上测试，再合并发布。项目名称暂不更改。
+按功能分支和提交推进：`fix/danmaku-rendering`、`feature/danmaku-controls`、`feature/player-quality`；倍速验证结果单独记录。每个功能先在开发者安装版上测试，再合并发布。
+
+2026-11-14 后续约定：名称改为「Roku小电视」，接入用户提供的粉色小电视图标，
+默认主题色改为粉色、字体改为黑体，并保留已保存的主题和字体偏好。这些调整在
+`feature/roku-tv-branding` 独立分支完成；按用户后续确认以 `--no-ff` 合入
+`main` 并推送，本次未发布或部署到电视。

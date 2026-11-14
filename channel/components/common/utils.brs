@@ -4,8 +4,8 @@
 ' subsets (built by scripts/make-font.py; the first is the default).
 function fonts() as Object
     return [
-        { key: "kai", name: "楷体", uri: "pkg:/fonts/kai.ttf" }
         { key: "hei", name: "黑体", uri: "pkg:/fonts/hei.ttf" }
+        { key: "kai", name: "楷体", uri: "pkg:/fonts/kai.ttf" }
         { key: "song", name: "宋体", uri: "pkg:/fonts/song.otf" }
     ]
 end function
@@ -44,8 +44,8 @@ end function
 
 function themes() as Object
     return [
-        { key: "yellow", name: "黄色", accent: "0xFFC93CFF", onAccent: "0x1B1B20FF" }
         { key: "pink", name: "粉色", accent: "0xFB7299FF", onAccent: "0xFFFFFFFF" }
+        { key: "yellow", name: "黄色", accent: "0xFFC93CFF", onAccent: "0x1B1B20FF" }
         { key: "blue", name: "蓝色", accent: "0x3D8BFDFF", onAccent: "0xFFFFFFFF" }
         { key: "green", name: "绿色", accent: "0x34D399FF", onAccent: "0x10261CFF" }
         { key: "purple", name: "紫色", accent: "0x9B7BFFFF", onAccent: "0xFFFFFFFF" }
