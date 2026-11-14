@@ -63,7 +63,9 @@ function selectTracks(dash as Object) as Dynamic
         videos.Push(best[k])
     end for
     if videos.Count() = 0 then return invalid
-    videos.SortBy("bandwidth")
+    ' Quality choices and the fallback below use qid order; the DASH player still
+    ' reads each representation's own bandwidth when adapting in auto mode.
+    videos.SortBy("qid")
 
     audio = invalid
     if type(dash.audio) = "roArray" then
