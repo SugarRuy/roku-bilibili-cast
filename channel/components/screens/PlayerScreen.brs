@@ -11,6 +11,8 @@ sub init()
     m.danmaku = m.top.findNode("danmaku")
     m.panel = m.top.findNode("panel")
     m.keywordEditor = m.top.findNode("keywordEditor")
+    m.interactionMenu = m.top.findNode("interactionMenu")
+    m.coinMenu = m.top.findNode("coinMenu")
     m.list = m.top.findNode("list")
     m.dmHint = m.top.findNode("dmHint")
 
@@ -81,8 +83,13 @@ sub init()
     m.panel.observeField("keywordRequested", "openKeywordEditor")
     m.panel.observeField("listRequested", "onPanelList")
     m.panel.observeField("qualityChoice", "onQualityChoice")
+    m.panel.observeField("interactionRequested", "openInteractions")
     m.keywordEditor.observeField("updated", "onKeywordsUpdated")
     m.keywordEditor.observeField("closed", "closeKeywordEditor")
+    m.interactionMenu.observeField("chosen", "onInteractionChosen")
+    m.interactionMenu.observeField("closed", "closeInteractionMenu")
+    m.coinMenu.observeField("chosen", "onCoinChosen")
+    m.coinMenu.observeField("closed", "closeCoinMenu")
     m.panel.observeField("closed", "closePanel")
     m.list.observeField("chosen", "onListChosen")
     m.list.observeField("closed", "closeList")
@@ -185,6 +192,141 @@ sub closeKeywordEditor()
     m.keywordEditor.visible = false
     m.panel.setFocus(true)
     if m.keywordWasPlaying and m.video.state = "paused" then m.video.control = "resume"
+end sub
+
+sub openInteractions()
+    if not m.global.loggedIn then
+        navigate({ action: "toast", text: "请先到“我的”扫码登录" })
+        return
+    end if
+    if m.req = invalid then return
+    aid = strOf(m.req.aid)
+    m.interactionTask = api("interactionstatus", { aid: aid }, "onInteractionStatus", aid)
+    navigate({ action: "toast", text: "正在读取互动状态…" })
+end sub
+
+sub onInteractionStatus(event as Object)
+    if m.castReleased or m.req = invalid then return
+    if event.getRoSGNode().tag <> strOf(m.req.aid) then return
+    res = event.getData()
+    if not res.ok then
+        navigate({ action: "toast", text: res.error })
+        return
+    end if
+    m.interactionStatus = res.data
+    labels = []
+    if intOf(res.data.liked) = 1 then
+        labels.Push("取消点赞")
+    else
+        labels.Push("点赞")
+    end if
+    if intOf(res.data.favorite) = 1 then
+        labels.Push("取消收藏")
+    else
+        labels.Push("收藏到默认收藏夹")
+    end if
+    if intOf(res.data.later) = 1 then
+        labels.Push("从稍后再看移除")
+    else
+        labels.Push("加入稍后再看")
+    end if
+    coinLabel = "投币…"
+    coins = intOf(res.data.coins)
+    if coins >= 0 then coinLabel = "投币…（已投 " + coins.ToStr() + "）"
+    labels.Push(coinLabel)
+    labels.Push("返回播放设置")
+    m.interactionMenu.title = "互动"
+    m.interactionMenu.message = "投币会再次确认；其他操作点击后生效"
+    m.interactionMenu.options = labels
+    m.interactionMenu.visible = true
+    m.interactionMenu.setFocus(true)
+end sub
+
+sub onInteractionChosen()
+    index = m.interactionMenu.chosen
+    if index = 4 then
+        closeInteractionMenu()
+        return
+    end if
+    if index = 3 then
+        m.interactionMenu.visible = false
+        m.coinStep = "select"
+        m.coinMenu.title = "投币"
+        m.coinMenu.message = "选择数量；下一步仍需确认"
+        m.coinMenu.options = ["取消", "投 1 枚", "投 2 枚"]
+        m.coinMenu.visible = true
+        m.coinMenu.setFocus(true)
+        return
+    end if
+    if m.interactionStatus = invalid then return
+    if index = 1 and strOf(m.interactionStatus.folder) = "" then
+        navigate({ action: "toast", text: "暂时无法读取收藏夹" })
+        closeInteractionMenu()
+        return
+    end if
+    action = "like"
+    value = 1
+    if index = 0 then
+        if intOf(m.interactionStatus.liked) = 1 then value = 0
+    else if index = 1 then
+        action = "favorite"
+        if intOf(m.interactionStatus.favorite) = 1 then value = 0
+    else if index = 2 then
+        action = "later"
+        if intOf(m.interactionStatus.later) = 1 then value = 0
+    end if
+    submitInteraction(action, value)
+end sub
+
+sub submitInteraction(action as String, value as Integer)
+    m.interactionMenu.visible = false
+    m.coinMenu.visible = false
+    m.panel.setFocus(true)
+    params = { aid: strOf(m.req.aid), action: action, value: value, folder: strOf(m.interactionStatus.folder) }
+    m.interactionActionTask = api("interactionaction", params, "onInteractionAction", strOf(m.req.aid))
+end sub
+
+sub onInteractionAction(event as Object)
+    if m.castReleased or m.req = invalid then return
+    if event.getRoSGNode().tag <> strOf(m.req.aid) then return
+    res = event.getData()
+    if res.ok then
+        navigate({ action: "toast", text: "操作成功" })
+    else
+        navigate({ action: "toast", text: "操作失败：" + res.error })
+    end if
+    openInteractions()
+end sub
+
+sub onCoinChosen()
+    index = m.coinMenu.chosen
+    if m.coinStep = "select" then
+        if index = 0 then
+            closeCoinMenu()
+            return
+        end if
+        m.coinAmount = index
+        m.coinStep = "confirm"
+        m.coinMenu.title = "确认投币 " + m.coinAmount.ToStr() + " 枚？"
+        m.coinMenu.message = "投币后无法撤销"
+        m.coinMenu.options = ["取消", "确认投币"]
+    else
+        if index = 1 then
+            submitInteraction("coin", m.coinAmount)
+        else
+            closeCoinMenu()
+        end if
+    end if
+end sub
+
+sub closeInteractionMenu()
+    m.interactionMenu.visible = false
+    m.panel.setFocus(true)
+end sub
+
+sub closeCoinMenu()
+    m.coinMenu.visible = false
+    m.panel.setFocus(true)
 end sub
 
 sub onDanmakuCount()
@@ -353,6 +495,8 @@ function nextVideo() as Dynamic
 end function
 
 sub startPart(index as Integer, startAt as Integer, fmt as String)
+    m.interactionMenu.visible = false
+    m.coinMenu.visible = false
     m.index = index
     m.startAt = startAt
     m.fmt = fmt

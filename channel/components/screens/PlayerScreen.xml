@@ -28,6 +28,8 @@
     <PlayList id="list" visible="false" />
     <PlayerPanel id="panel" visible="false" />
     <KeywordEditor id="keywordEditor" visible="false" />
+    <ActionMenu id="interactionMenu" visible="false" />
+    <ActionMenu id="coinMenu" visible="false" />
     <Timer id="hudTimer" duration="4" />
   </children>
 </component>
