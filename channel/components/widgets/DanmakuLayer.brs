@@ -16,10 +16,19 @@ sub init()
     m.playing = false
     m.basePos = 0.0
     m.clock = CreateObject("roTimespan")
+    m.gapClock = CreateObject("roTimespan")
+    m.reportClock = CreateObject("roTimespan")
+    m.maxGap = 0
+    m.maxActiveSeen = 0
+    m.tickCount = 0
+    m.lastVideoState = ""
+    m.spawnBucket = -1
+    m.spawnedSec = 0
     m.tick = m.top.findNode("tick")
     m.tick.observeField("fire", "onTick")
-    buildPool(64)
+    m.pool = []
     onArea()
+    onDensity()
 end sub
 
 ' Rows that fit in the chosen share of the screen. Below full screen, bottom
@@ -31,13 +40,12 @@ sub onArea()
     m.fixedLanes = 4
     if m.fixedLanes > m.scrollLanes then m.fixedLanes = m.scrollLanes
     m.bottomAllowed = m.top.area >= 0.99
-    if m.pool <> invalid then clearAll()
+    clearAll()
 end sub
 
-sub buildPool(n as Integer)
+sub ensurePool(n as Integer)
     pool = m.top.findNode("pool")
-    m.pool = []
-    for i = 0 to n - 1
+    for i = m.pool.Count() to n - 1
         g = pool.createChild("Group")
         g.id = "dm" + i.ToStr()
         g.visible = false
@@ -55,6 +63,21 @@ sub buildPool(n as Integer)
         interp.key = [0.0, 1.0]
         m.pool.Push({ g: g, sh: sh, lb: lb, anim: anim, interp: interp, busy: false, scroll: false, until: 0.0 })
     end for
+end sub
+
+sub onDensity()
+    level = m.top.density
+    m.maxActive = 24
+    m.maxPerSec = 8
+    if level = "low" then
+        m.maxActive = 16
+        m.maxPerSec = 4
+    else if level = "high" then
+        m.maxActive = 36
+        m.maxPerSec = 12
+    end if
+    clearAll()
+    if m.top.enabled then ensurePool(m.maxActive)
 end sub
 
 sub resetLanes()
@@ -77,6 +100,7 @@ end sub
 sub onVideo()
     v = m.top.video
     if v = invalid then return
+    m.lastVideoState = ""
     v.observeField("position", "onPosition")
     v.observeField("state", "onState")
 end sub
@@ -98,12 +122,16 @@ end sub
 
 sub onState()
     s = m.top.video.state
+    if s = m.lastVideoState then return
+    m.lastVideoState = s
     if s = "playing" then
         if not m.playing then
             m.basePos = m.top.video.position
             m.clock.Mark()
             m.playing = true
             setAnimations("resume")
+            m.gapClock.Mark()
+            m.reportClock.Mark()
         end if
         if m.top.enabled then m.tick.control = "start"
     else
@@ -122,6 +150,8 @@ sub seekTo(p as Float)
     m.basePos = p
     m.clock.Mark()
     m.cursor = lowerBound(p)
+    m.spawnBucket = -1
+    m.spawnedSec = 0
 end sub
 
 function lowerBound(t as Float) as Integer
@@ -160,6 +190,7 @@ end sub
 
 sub onEnabled()
     if m.top.enabled then
+        ensurePool(m.maxActive)
         m.top.visible = true
         m.cursor = lowerBound(now())
         if m.playing then m.tick.control = "start"
@@ -174,20 +205,43 @@ end sub
 
 sub onTick()
     t = now()
+    gap = m.gapClock.TotalMilliseconds()
+    if gap > m.maxGap then m.maxGap = gap
+    m.gapClock.Mark()
+    active = 0
     for each it in m.pool
         if it.busy and it.until <= t then release(it)
+        if it.busy then active = active + 1
     end for
+    if active > m.maxActiveSeen then m.maxActiveSeen = active
+    m.tickCount = m.tickCount + 1
     n = m.items.Count()
     spawned = 0
+    if m.cursor < n and m.items[m.cursor][0] < t - 1.0 then m.cursor = lowerBound(t - 1.0)
     while m.cursor < n
         d = m.items[m.cursor]
         if d[0] > t then exit while
         m.cursor = m.cursor + 1
+        bucket = Int(d[0])
+        if bucket <> m.spawnBucket then
+            m.spawnBucket = bucket
+            m.spawnedSec = 0
+        end if
         ' skip a backlog (after a stall) instead of dumping it all at once
-        if d[0] >= t - 1.0 and spawned < 6 then
-            if spawn(d, t) then spawned = spawned + 1
+        if d[0] >= t - 1.0 and spawned < 6 and m.spawnedSec < m.maxPerSec then
+            if spawn(d, t) then
+                spawned = spawned + 1
+                m.spawnedSec = m.spawnedSec + 1
+            end if
         end if
     end while
+    if m.reportClock.TotalMilliseconds() >= 5000 then
+        print "[dm-perf] ticks="; m.tickCount; " maxGapMs="; m.maxGap; " maxActive="; m.maxActiveSeen; " density="; m.top.density
+        m.tickCount = 0
+        m.maxGap = 0
+        m.maxActiveSeen = 0
+        m.reportClock.Mark()
+    end if
 end sub
 
 function freeLane(lanes as Object, t as Float) as Integer
@@ -207,7 +261,8 @@ function freeTopLane(t as Float) as Integer
 end function
 
 function idleItem() as Dynamic
-    for each it in m.pool
+    for i = 0 to m.maxActive - 1
+        it = m.pool[i]
         if not it.busy then return it
     end for
     return invalid

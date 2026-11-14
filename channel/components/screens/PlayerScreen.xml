@@ -18,7 +18,7 @@
       <Label id="title" translation="[96,54]" width="1420" maxLines="1" color="0xFFFFFFFF" />
       <Label id="sub" translation="[96,114]" width="1420" maxLines="1" color="0xB4B4C0FF" />
       <Label id="quality" translation="[1520,118]" width="304" horizAlign="right" />
-      <Label id="dmHint" translation="[1024,166]" width="800" horizAlign="right" color="0x8E8E9EFF" />
+      <Label id="dmHint" translation="[824,165]" width="1000" horizAlign="right" color="0xFB7299FF" />
     </Group>
     <Group id="loading">
       <BusySpinner id="spinner" translation="[928,470]" />
