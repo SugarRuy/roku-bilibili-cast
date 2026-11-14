@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="KeywordEditor" extends="Group">
+  <interface>
+    <field id="keywords" type="array" onChange="onKeywords" />
+    <field id="updated" type="array" alwaysNotify="true" />
+    <field id="closed" type="boolean" alwaysNotify="true" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/common/utils.brs" />
+  <script type="text/brightscript" uri="KeywordEditor.brs" />
+  <children>
+    <Rectangle width="1920" height="1080" color="0x0F0F14FF" />
+    <Label id="heading" translation="[96,58]" text="关键词屏蔽" color="0xFFFFFFFF" />
+    <Label id="hint" translation="[96,128]" width="1650" text="输入关键词，按右键选“添加”；选已有关键词可删除。返回键关闭。" color="0xB4B4C0FF" />
+    <Group translation="[88,205]" scale="[0.8,0.8]">
+      <MiniKeyboard id="kb" />
+    </Group>
+    <Label id="listHeading" translation="[825,205]" text="已屏蔽" color="0xFFFFFFFF" />
+    <LabelList id="list" translation="[808,270]" itemSize="[970,64]" numRows="10" color="0xD2D2DCFF" vertFocusAnimationStyle="floatingFocus" />
+    <Label id="message" translation="[825,945]" width="940" color="0xFB7299FF" />
+  </children>
+</component>

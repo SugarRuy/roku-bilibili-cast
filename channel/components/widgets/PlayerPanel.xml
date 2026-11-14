@@ -6,6 +6,18 @@
     <field id="enabled" type="boolean" value="true" />
     <field id="alpha" type="float" value="0.8" />
     <field id="area" type="float" value="0.5" />
+    <field id="density" type="string" value="normal" />
+    <field id="size" type="string" value="normal" />
+    <field id="speed" type="string" value="normal" />
+    <field id="scrollEnabled" type="boolean" value="true" />
+    <field id="topEnabled" type="boolean" value="true" />
+    <field id="bottomEnabled" type="boolean" value="true" />
+    <field id="keywordCount" type="integer" />
+    <field id="qualities" type="array" />
+    <field id="qualityChoice" type="string" value="auto" />
+    <field id="keywordRequested" type="boolean" alwaysNotify="true" />
+    <field id="listRequested" type="boolean" alwaysNotify="true" />
+    <field id="interactionRequested" type="boolean" alwaysNotify="true" />
     <field id="count" type="integer" onChange="paint" />
     <field id="closed" type="boolean" alwaysNotify="true" />
   </interface>

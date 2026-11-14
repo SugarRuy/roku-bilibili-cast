@@ -29,6 +29,8 @@ sub init()
     m.pool = []
     onArea()
     onDensity()
+    onSize()
+    onSpeed()
 end sub
 
 ' Rows that fit in the chosen share of the screen. Below full screen, bottom
@@ -79,6 +81,43 @@ sub onDensity()
     clearAll()
     if m.top.enabled then ensurePool(m.maxActive)
 end sub
+
+sub onSize()
+    pixels = 42
+    if m.top.size = "small" then pixels = 32
+    if m.top.size = "large" then pixels = 52
+    m.font.size = pixels
+    m.laneH = pixels + 14
+    onArea()
+    m.cursor = lowerBound(now())
+end sub
+
+sub onSpeed()
+    m.speed = 230.0
+    if m.top.speed = "slow" then m.speed = 180.0
+    if m.top.speed = "fast" then m.speed = 300.0
+    clearAll()
+    m.cursor = lowerBound(now())
+end sub
+
+sub onFilter()
+    clearAll()
+    m.cursor = lowerBound(now())
+end sub
+
+function blocked(d as Object) as Boolean
+    mode = d[1]
+    if mode = 1 and not m.top.scrollEnabled then return true
+    if mode = 5 and not m.top.topEnabled then return true
+    if mode = 4 and not m.top.bottomEnabled then return true
+    if m.top.keywords <> invalid then
+        message = LCase(d[3])
+        for each word in m.top.keywords
+            if word <> "" and Instr(1, message, LCase(word)) > 0 then return true
+        end for
+    end if
+    return false
+end function
 
 sub resetLanes()
     m.scrollFree = []
@@ -228,7 +267,7 @@ sub onTick()
             m.spawnedSec = 0
         end if
         ' skip a backlog (after a stall) instead of dumping it all at once
-        if d[0] >= t - 1.0 and spawned < 6 and m.spawnedSec < m.maxPerSec then
+        if d[0] >= t - 1.0 and spawned < 6 and m.spawnedSec < m.maxPerSec and not blocked(d) then
             if spawn(d, t) then
                 spawned = spawned + 1
                 m.spawnedSec = m.spawnedSec + 1
