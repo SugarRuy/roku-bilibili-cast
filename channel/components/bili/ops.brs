@@ -60,6 +60,19 @@ sub execute()
     else
         res = fail("unknown op " + op)
     end if
+    ' Build grid pages on this Task while the user can still scroll. Publishing
+    ' the completed tree avoids building and exposing partial cards on the UI.
+    if res.ok and (op = "home" or op = "search" or op = "upvideos" or op = "favlist") then
+        started = CreateObject("roTimespan")
+        textWidth = 414
+        if op = "search" then textWidth = 350
+        prepareGridText(res.data.items, textWidth)
+        content = cardsToContent(res.data.items, CreateObject("roSGNode", "ContentNode"))
+        res.data.Delete("items")
+        print "[grid-perf] prepare op="; op; " items="; content.getChildCount(); " ms="; started.TotalMilliseconds()
+        ' Publish only after all Task-side tree reads/writes are complete.
+        m.top.resultContent = content
+    end if
     m.top.response = res
 end sub
 

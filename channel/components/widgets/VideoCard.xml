@@ -22,8 +22,9 @@
     <Rectangle id="progressBg" color="0xFFFFFF40" visible="false" />
     <Rectangle id="progressBar" visible="false" />
     <Poster id="badge" uri="pkg:/images/badge.9.png" visible="false" />
-    <Label id="duration" color="0xFFFFFFFF" font="font:SmallestSystemFont" />
+    <Label id="duration" color="0xFFFFFFFF" font="font:SmallestSystemFont" horizAlign="center" vertAlign="center" />
     <Label id="title" color="0xD2D2DCFF" wrap="true" maxLines="2" lineSpacing="2" />
     <Label id="meta" color="0x8E8E9EFF" maxLines="1" />
+    <Poster id="gridText" visible="false" blendColor="0xD2D2DCFF" />
   </children>
 </component>
