@@ -60,6 +60,7 @@ sub onSelected()
         word = m.words[index - 1]
         m.words.Delete(index - 1)
         m.message.text = "已删除：“" + word + "”"
+        print "[keyword] removed count="; m.words.Count()
     end if
     renderList()
     m.top.updated = m.words
@@ -88,6 +89,7 @@ sub addWord()
     m.words.Push(word)
     m.kb.text = ""
     m.message.text = "已添加：“" + word + "”"
+    print "[keyword] added count="; m.words.Count()
     m.focusNode = m.kb
     m.kb.setFocus(true)
     renderList()
