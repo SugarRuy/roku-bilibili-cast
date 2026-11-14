@@ -1,4 +1,5 @@
 sub init()
+    m.top.allowBackgroundTask = true
     m.top.backgroundColor = "0x0F0F14FF"
     m.top.backgroundUri = ""
     m.global.theme = themeByKey(loadSetting("theme", "yellow"))
@@ -23,6 +24,40 @@ sub init()
     ' a saved session may have expired since last time
     if m.global.loggedIn then m.navTask = api("nav", invalid, "onNav")
     startCastReceiver()
+end sub
+
+' Experimental Instant Resume integration. Release video resources before Home
+' while the independent receiver task keeps its own network state.
+sub suspendForCast(arg as Dynamic)
+    m.castTimer.control = "stop"
+    m.castGeneration += 1
+    m.castRequest = invalid
+    if m.castTask <> invalid then m.castTask.cancelled = true
+    if arg.lastSuspendOrResumeReason = "home" then
+        while m.stack.Count() > 1
+            current = m.stack.Peek()
+            if current.Subtype() = "PlayerScreen" then current.castCommand = { action: "release" }
+            pop()
+        end while
+    end if
+    m.cast.playback = { state: 7, position: 0, duration: 0 }
+    m.cast.suspended = true
+    print "[cast-ui] suspended "; arg.lastSuspendOrResumeReason
+end sub
+
+sub resumeForCast(arg as Dynamic)
+    m.top.allowBackgroundTask = true
+    m.cast.suspended = false
+    m.castTimer.control = "start"
+    m.top.signalBeacon("AppResumeComplete")
+    print "[cast-ui] resumed "; arg.lastSuspendOrResumeReason
+    ' Instant Resume delivers launch arguments here, rather than through roInput.
+    params = arg.launchParams
+    if type(params) = "roAssociativeArray" then
+        if strOf(params.contentId) <> "" then
+            m.top.deeplink = { bvid: strOf(params.contentId), mediaType: params.mediaType }
+        end if
+    end if
 end sub
 
 sub onLoggedIn()

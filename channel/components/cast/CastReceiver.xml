@@ -7,6 +7,7 @@
     <field id="shutdown" type="boolean" />
     <field id="signedIn" type="boolean" />
     <field id="diagnostics" type="assocarray" />
+    <field id="suspended" type="boolean" />
   </interface>
   <script type="text/brightscript" uri="CastProtocol.brs" />
   <script type="text/brightscript" uri="CastReceiver.brs" />

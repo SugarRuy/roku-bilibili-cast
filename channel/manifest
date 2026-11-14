@@ -10,3 +10,5 @@ splash_min_time=600
 ui_resolutions=fhd
 supports_input_launch=1
 dial_title=RokuBiliCast
+sdk_instant_resume=1
+run_as_process=1

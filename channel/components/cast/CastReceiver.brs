@@ -1,4 +1,4 @@
-' Foreground-only SSDP + NVA receiver. No account cookies or arbitrary URLs enter this task.
+' Experimental resumable SSDP + NVA receiver. No account cookies or arbitrary URLs enter this task.
 sub init()
     m.top.functionName = "castServe"
 end sub
@@ -6,6 +6,21 @@ end sub
 sub castServe()
     m.port = CreateObject("roMessagePort")
     m.clock = CreateObject("roTimespan")
+    ' Never pull SceneGraph fields in the network loop while the scene is
+    ' suspended. Node events carry copies into task-local caches instead.
+    for each field in ["playback", "diagnostics", "signedIn", "shutdown", "suspended"]
+        m.top.observeField(field, m.port)
+    end for
+    m.playbackCache = m.top.playback
+    m.pipelineCache = m.top.diagnostics
+    m.signedInCache = m.top.signedIn
+    m.stopRequested = m.top.shutdown
+    m.suspended = m.top.suspended
+    m.pendingCommands = []
+    m.wakeTransfer = invalid
+    m.wakeAttempts = 0
+    m.wakeAt = 0
+    m.wakeRetryAt = -1
     m.clients = []
     m.events = []
     m.commandId = 0
@@ -61,9 +76,11 @@ sub castServe()
     m.top.status = { ok: true, name: m.name, ip: m.ip, ssdp: m.joined }
     lastAdvert = -10000
     lastStatus = -1000
-    while not m.top.shutdown
+    while not m.stopRequested
         msg = wait(50, m.port)
         now = m.clock.TotalMilliseconds()
+        castTaskEvent(msg)
+        castWakeTick(now)
         if m.listener.IsReadable() then castAccept()
         if m.udp.IsReadable() then castDiscovery()
         if now - lastAdvert >= 3000 then
@@ -226,7 +243,7 @@ sub castHttp(c as Object)
         castHttpReply(c, "200 OK", "text/xml", ReadAsciiFile("pkg:/resources/cast/AVTransport.xml"))
     else if method = "GET" and path = "/status" then
         ' Deliberately excludes URLs, cookies, video titles and received message bodies.
-        castHttpReply(c, "200 OK", "application/json", FormatJson({ name: m.name, ssdpBound: m.ssdpBound, multicastJoined: m.joined, clients: m.clients.Count(), events: m.events, playback: castPlayback(), pipeline: m.top.diagnostics }))
+        castHttpReply(c, "200 OK", "application/json", FormatJson({ name: m.name, ssdpBound: m.ssdpBound, multicastJoined: m.joined, clients: m.clients.Count(), events: m.events, playback: castPlayback(), pipeline: m.pipelineCache, suspended: m.suspended, pending: m.pendingCommands.Count() }))
     else if method = "POST" and path = "/AVTransport/action" then
         castSoap(c, headers, body)
     else if method = "POST" and path = "/NirvanaControl/action" then
@@ -306,13 +323,28 @@ sub castAction(c as Object, frame as Object)
 end sub
 
 sub castDispatch(command as Object)
+    if m.suspended then
+        ' Discovery, GetAppInfo and NVA SETUP never wake the screen. Only an
+        ' actual video request starts a wake; follow-up controls stay ordered.
+        if command.action = "play" then
+            m.pendingCommands = [command]
+            if m.wakeTransfer = invalid and m.wakeRetryAt < 0 then
+                m.wakeAttempts = 0
+                m.wakeAt = m.clock.TotalMilliseconds()
+                castStartWake()
+            end if
+        else if m.pendingCommands.Count() > 0 and m.pendingCommands.Count() < 16 then
+            m.pendingCommands.Push(command)
+        end if
+        return
+    end if
     m.commandId = m.commandId + 1
     command.id = m.commandId
     m.top.command = command
 end sub
 
 function castPlayback() as Object
-    state = m.top.playback
+    state = m.playbackCache
     if type(state) <> "roAssociativeArray" then return { state: 7, position: 0, duration: 0 }
     return state
 end function
@@ -374,7 +406,7 @@ sub castSoap(c as Object, headers as Object, body as String, service = "urn:sche
     state = castPlayback()
     if action = "GetAppInfo" then
         signedIn = "0"
-        if m.top.signedIn then signedIn = "1"
+        if m.signedInCache then signedIn = "1"
         fields = { "PackageName": "com.xiaodianshi.tv.yst", "AppKey": "0000000000000000", "Signature": "0000000000000000", "CurrentSignedIn": signedIn }
     else if action = "SetDanmakuSwitch" then
         command = { action: "danmaku", enabled: castText(args.DesiredSwitch) = "1" or castText(args.DesiredSwitch) = "true" }
@@ -416,3 +448,65 @@ end sub
 function castHms(seconds as Integer) as String
     return (seconds \ 3600).ToStr() + ":" + Right("0" + ((seconds \ 60) mod 60).ToStr(), 2) + ":" + Right("0" + (seconds mod 60).ToStr(), 2)
 end function
+
+sub castTaskEvent(event as Dynamic)
+    if type(event) = "roSGNodeEvent" then
+        field = LCase(event.GetField())
+        data = event.GetData()
+        if field = "playback" then
+            m.playbackCache = data
+        else if field = "diagnostics" then
+            m.pipelineCache = data
+        else if field = "signedin" then
+            m.signedInCache = data
+        else if field = "shutdown" then
+            m.stopRequested = data
+        else if field = "suspended" then
+            m.suspended = data
+            castLog("lifecycle", "suspended=" + m.suspended.ToStr())
+            if not m.suspended then
+                m.wakeRetryAt = -1
+                queued = m.pendingCommands
+                m.pendingCommands = []
+                for each command in queued
+                    castDispatch(command)
+                end for
+            end if
+        end if
+    else if type(event) = "roUrlEvent" and m.wakeTransfer <> invalid then
+        if event.GetSourceIdentity() <> m.wakeTransfer.GetIdentity() then return
+        code = event.GetResponseCode()
+        castLog("self-wake", "DIAL status=" + code.ToStr())
+        m.wakeTransfer = invalid
+        if code = 503 and m.wakeAttempts < 3 and m.suspended then
+            m.wakeRetryAt = m.clock.TotalMilliseconds() + 1000
+        else if code <> 200 and code <> 201 then
+            m.pendingCommands = []
+        end if
+    end if
+end sub
+
+sub castStartWake()
+    m.wakeRetryAt = -1
+    m.wakeAttempts += 1
+    m.wakeTransfer = CreateObject("roUrlTransfer")
+    m.wakeTransfer.SetMessagePort(m.port)
+    m.wakeTransfer.SetUrl("http://127.0.0.1:8060/dial/RokuBiliCast")
+    m.wakeTransfer.AddHeader("Content-Type", "text/plain; charset=utf-8")
+    if not m.wakeTransfer.AsyncPostFromString("wake=cast") then
+        castLog("self-wake", "could not start DIAL request")
+        m.wakeTransfer = invalid
+        m.pendingCommands = []
+    end if
+end sub
+
+sub castWakeTick(now as Integer)
+    if m.wakeRetryAt >= 0 and now >= m.wakeRetryAt then castStartWake()
+    if m.pendingCommands.Count() > 0 and now - m.wakeAt > 10000 then
+        if m.wakeTransfer <> invalid then m.wakeTransfer.AsyncCancel()
+        m.wakeTransfer = invalid
+        m.wakeRetryAt = -1
+        m.pendingCommands = []
+        castLog("self-wake", "resume timed out; discarded queued commands")
+    end if
+end sub
