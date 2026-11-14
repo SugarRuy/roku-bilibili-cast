@@ -23,6 +23,10 @@ sub execute()
         res = opPlay(p)
     else if op = "danmaku" then
         res = opDanmaku(p)
+    else if op = "interactionstatus" then
+        res = opInteractionStatus(p)
+    else if op = "interactionaction" then
+        res = opInteractionAction(p)
     else if op = "nav" then
         res = opNav()
     else if op = "qr" then
@@ -615,6 +619,86 @@ function accountPost(path as String, params as Object) as Object
     if type(j) <> "roAssociativeArray" then return fail("请求失败（HTTP " + r.code.ToStr() + "）")
     if intOf(j.code) <> 0 then return fail(strOf(j.message) + "（" + strOf(j.code) + "）")
     return okWith({})
+end function
+
+' ---------- video interaction ----------
+
+function opInteractionStatus(p as Object) as Object
+    aid = strOf(p.aid)
+    if aid = "" or not isLoggedIn() then return fail("请先到“我的”扫码登录")
+    out = { liked: -1, coins: -1, favorite: -1, later: -1, folder: "" }
+
+    liked = biliApi(apiBase() + "/x/web-interface/archive/has/like", { aid: aid })
+    if liked.ok then out.liked = intOf(liked.data)
+
+    coins = biliApi(apiBase() + "/x/web-interface/archive/coins", { aid: aid })
+    if coins.ok and type(coins.data) = "roAssociativeArray" then out.coins = intOf(coins.data.multiply)
+
+    uid = strOf(loadCookies().dedeuserid)
+    folders = biliApi(apiBase() + "/x/v3/fav/folder/created/list-all", { up_mid: uid, rid: aid, type: 2 })
+    list = invalid
+    if folders.ok then
+        if type(folders.data) = "roArray" then list = folders.data
+        if type(folders.data) = "roAssociativeArray" then list = folders.data.list
+    end if
+    if type(list) = "roArray" and list.Count() > 0 then
+        out.favorite = 0
+        out.folder = strOf(list[0].id)
+        for each f in list
+            if boolOf(f.is_default) then out.folder = strOf(f.id)
+        end for
+        for each f in list
+            if boolOf(f.fav_state) then
+                out.favorite = 1
+                out.folder = strOf(f.id)
+                exit for
+            end if
+        end for
+    end if
+
+    later = biliApi(apiBase() + "/x/v2/history/toview/web", { pn: 1, ps: 100 })
+    if later.ok and type(later.data) = "roAssociativeArray" then
+        items = later.data.list
+        if type(items) = "roArray" then
+            for each item in items
+                if strOf(item.aid) = aid then out.later = 1
+            end for
+            if out.later <> 1 and not isNil(later.data.count) then
+                if intOf(later.data.count) <= items.Count() then out.later = 0
+            end if
+        end if
+    end if
+    return okWith(out)
+end function
+
+function opInteractionAction(p as Object) as Object
+    aid = strOf(p.aid)
+    if not CreateObject("roRegex", "^[1-9][0-9]{0,17}$", "").IsMatch(aid) then return fail("无效视频编号")
+    action = strOf(p.action)
+    value = intOf(p.value)
+    if action = "like" then
+        liked = 1
+        if value = 0 then liked = 2
+        return accountPost("/x/web-interface/archive/like", { aid: aid, like: liked })
+    else if action = "favorite" then
+        folder = strOf(p.folder)
+        if not CreateObject("roRegex", "^[1-9][0-9]{0,17}$", "").IsMatch(folder) then return fail("收藏夹不可用")
+        params = { rid: aid, type: 2 }
+        if value = 1 then
+            params.add_media_ids = folder
+        else
+            params.del_media_ids = folder
+        end if
+        return accountPost("/x/v3/fav/resource/deal", params)
+    else if action = "later" then
+        path = "/x/v2/history/toview/add"
+        if value = 0 then path = "/x/v2/history/toview/del"
+        return accountPost(path, { aid: aid })
+    else if action = "coin" then
+        if value <> 1 and value <> 2 then return fail("投币数量应为 1 或 2")
+        return accountPost("/x/web-interface/coin/add", { aid: aid, multiply: value, select_like: 0 })
+    end if
+    return fail("不支持的操作")
 end function
 
 ' Where the account left off: last_play_time is in ms, last_play_cid picks the part.
