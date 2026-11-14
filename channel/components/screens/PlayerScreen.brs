@@ -502,14 +502,16 @@ end sub
 sub onPosition()
     if m.castReleased then return
     if m.qualityResumePending then
-        if Int(m.video.position) < m.startAt - 2 then
+        ' Roku may seek to the preceding DASH keyframe. Only hide the transient
+        ' zero position; waiting for an exact timestamp could stall cast status.
+        if m.video.position < 1 then
             publishCastState()
             return
         end if
         m.qualityResumePending = false
         m.switchingPlayback = false
         m.qualityBackup = invalid
-        print "[quality] resumed at="; m.video.position
+        print "[quality] resumed target="; m.startAt; " actual="; m.video.position
     end if
     publishCastState()
     secs = Int(m.video.position)
