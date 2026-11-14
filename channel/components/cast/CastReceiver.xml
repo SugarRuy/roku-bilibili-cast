@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="CastReceiver" extends="Task">
+  <interface>
+    <field id="command" type="assocarray" alwaysNotify="true" />
+    <field id="playback" type="assocarray" />
+    <field id="status" type="assocarray" alwaysNotify="true" />
+    <field id="shutdown" type="boolean" />
+    <field id="signedIn" type="boolean" />
+    <field id="diagnostics" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="CastProtocol.brs" />
+  <script type="text/brightscript" uri="CastReceiver.brs" />
+</component>

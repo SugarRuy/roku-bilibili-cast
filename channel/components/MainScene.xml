@@ -7,6 +7,7 @@
   </interface>
   <script type="text/brightscript" uri="pkg:/components/common/utils.brs" />
   <script type="text/brightscript" uri="MainScene.brs" />
+  <script type="text/brightscript" uri="pkg:/components/cast/CastBridge.brs" />
   <children>
     <Rectangle width="1920" height="1080" color="0x0F0F14FF" />
     <Group id="stack" />
@@ -16,5 +17,6 @@
     </Group>
     <Timer id="toastTimer" duration="3.5" />
     <Timer id="rebuildTimer" duration="0.1" />
+    <Timer id="castTimer" duration="0.5" repeat="true" />
   </children>
 </component>

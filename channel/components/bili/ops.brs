@@ -183,8 +183,13 @@ end function
 ' ---------- one video ----------
 
 function opVideo(p as Object) as Object
-    r = biliApi(apiBase() + "/x/web-interface/wbi/view", { bvid: strOf(p.bvid) }, true)
+    timer = CreateObject("roTimespan")
+    query = { bvid: strOf(p.bvid) }
+    if query.bvid = "" then query = { aid: strOf(p.aid) }
+    r = biliApi(apiBase() + "/x/web-interface/wbi/view", query, true)
     if not r.ok then return fail(r.error)
+    if m.top.cancelled then return fail("cancelled")
+    apiMs = timer.TotalMilliseconds()
     d = r.data
     owner = d.owner
     if type(owner) <> "roAssociativeArray" then owner = {}
@@ -193,6 +198,7 @@ function opVideo(p as Object) as Object
     pages = []
     if type(d.pages) = "roArray" then
         for each pg in d.pages
+            if m.top.cancelled then return fail("cancelled")
             part = fit(strOf(pg.part))
             if part = "" then part = "P" + strOf(pg.page)
             pages.Push({ cid: strOf(pg.cid), page: intOf(pg.page), part: part, duration: intOf(pg.duration), duration_text: fmtTime(intOf(pg.duration)) })
@@ -200,7 +206,7 @@ function opVideo(p as Object) as Object
     end if
     desc = strOf(d.desc)
     if Len(desc) > 400 then desc = Left(desc, 400) + "…"
-    return okWith({
+    result = okWith({
         bvid: strOf(d.bvid)
         aid: strOf(d.aid)
         cid: strOf(d.cid)
@@ -217,6 +223,8 @@ function opVideo(p as Object) as Object
         like_text: fmtCount(stat.like)
         pages: pages
     })
+    if m.top.tag <> "" then print "[bili-video] tag="; m.top.tag; " pages="; pages.Count(); " apiMs="; apiMs; " totalMs="; timer.TotalMilliseconds()
+    return result
 end function
 
 function opRelated(p as Object) as Object

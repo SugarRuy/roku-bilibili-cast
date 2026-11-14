@@ -15,6 +15,7 @@ Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itsel
 - Play modes: stop at the end, autoplay (moves on to the next related video you haven't watched) or repeat; during playback you can open a video list to jump to another part or another video
 - Watch progress syncs with your Bilibili account both ways: stop on the TV and continue on your phone, or the other way round
 - Multi-part videos, related videos, resume playback
+- Cast from a video's playback page in the Bilibili mobile app to the Roku on the same LAN (experimental; [usage and limits](docs/cast.md))
 - Theme colour (yellow / pink / blue / green / purple) and font (Kai / Hei / Song) in Settings
 
 The interface is in Chinese, as is Bilibili.

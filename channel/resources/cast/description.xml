@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0" xmlns:dlna="urn:schemas-dlna-org:device-1-0">
+  <specVersion><major>1</major><minor>0</minor></specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
+    <UDN>uuid:{{UUID}}</UDN>
+    <friendlyName>{{NAME}}</friendlyName>
+    <!-- Bilibili discovery metadata; friendlyName identifies this community prototype. -->
+    <manufacturer>Bilibili Inc.</manufacturer>
+    <manufacturerURL>https://bilibili.com/</manufacturerURL>
+    <modelDescription>云视听小电视</modelDescription>
+    <modelName>Roku Bili Cast Prototype</modelName>
+    <modelNumber>1024</modelNumber>
+    <modelURL>https://app.bilibili.com/</modelURL>
+    <serialNumber>1024</serialNumber>
+    <X_brandName>Roku</X_brandName>
+    <hostVersion>25</hostVersion>
+    <ottVersion>106400</ottVersion>
+    <channelName>master</channelName>
+    <capability>254</capability>
+    <dlna:X_DLNADOC>DMR-1.50</dlna:X_DLNADOC>
+    <serviceList>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:AVTransport</serviceId>
+        <controlURL>/AVTransport/action</controlURL>
+        <eventSubURL>/AVTransport/event</eventSubURL>
+        <SCPDURL>/dlna/AVTransport.xml</SCPDURL>
+      </service>
+      <service>
+        <serviceType>urn:app-bilibili-com:service:NirvanaControl:3</serviceType>
+        <serviceId>urn:app-bilibili-com:serviceId:NirvanaControl</serviceId>
+        <controlURL>/NirvanaControl/action</controlURL>
+        <eventSubURL>/NirvanaControl/event</eventSubURL>
+        <SCPDURL>/dlna/NirvanaControl.xml</SCPDURL>
+      </service>
+    </serviceList>
+  </device>
+</root>

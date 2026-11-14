@@ -89,6 +89,12 @@ function httpPost(url as String, form as String) as Object
 end function
 
 function httpRequest(url as String, form as Dynamic, withCookies as Boolean, timeoutMs = 20000 as Integer) as Object
+    out = { code: 0, body: "", failure: "", headers: [] }
+    if m.top.cancelled then
+        out.failure = "cancelled"
+        return out
+    end if
+    timer = CreateObject("roTimespan")
     port = CreateObject("roMessagePort")
     x = CreateObject("roUrlTransfer")
     x.SetMessagePort(port)
@@ -105,7 +111,6 @@ function httpRequest(url as String, form as Dynamic, withCookies as Boolean, tim
         ck = cookieHeader(loadCookies())
         if ck <> "" then x.AddHeader("Cookie", ck)
     end if
-    out = { code: 0, body: "", failure: "", headers: [] }
     if isNil(form) then
         sent = x.AsyncGetToString()
     else
@@ -116,24 +121,69 @@ function httpRequest(url as String, form as Dynamic, withCookies as Boolean, tim
         out.failure = "request not sent"
         return out
     end if
-    msg = wait(timeoutMs, port)
-    if type(msg) = "roUrlEvent" then
-        out.code = msg.GetResponseCode()
-        out.body = msg.GetString()
-        out.failure = msg.GetFailureReason()
-        out.headers = msg.GetResponseHeadersArray()
-    else
-        x.AsyncCancel()
-        out.failure = "timeout"
-    end if
+    ' The Task owns its transfer. Never force Task.control=STOP from the render
+    ' thread: Roku can wait for the transfer there and hit an execution timeout.
+    while true
+        if m.top.cancelled then
+            x.AsyncCancel()
+            out.failure = "cancelled"
+            exit while
+        end if
+        remaining = timeoutMs - timer.TotalMilliseconds()
+        if remaining <= 0 then
+            x.AsyncCancel()
+            out.failure = "timeout"
+            exit while
+        end if
+        if remaining > 100 then remaining = 100
+        msg = wait(remaining, port)
+        if type(msg) = "roUrlEvent" then
+            out.code = msg.GetResponseCode()
+            out.body = msg.GetString()
+            out.failure = msg.GetFailureReason()
+            out.headers = msg.GetResponseHeadersArray()
+            exit while
+        end if
+    end while
+    if m.top.tag <> "" then print "[bili-http] op="; m.top.op; " tag="; m.top.tag; " ms="; timer.TotalMilliseconds(); " status="; out.code; " cancelled="; m.top.cancelled
     return out
 end function
 
 ' ids such as cid/aid overflow 32 bits; quote them before ParseJson can round them.
 function parseBili(body as String) as Dynamic
     if Len(body) = 0 then return invalid
+    timer = CreateObject("roTimespan")
     if m.bigInts = invalid then m.bigInts = CreateObject("roRegex", """(aid|cid|oid|mid|id|season_id|ep_id|rpid|last_play_cid|max)"":(\d{9,})", "")
-    return ParseJson(m.bigInts.ReplaceAll(body, """\1"":""\2"""))
+    text = quoteBiliIds(body)
+    if text = "" then return invalid
+    rewriteMs = timer.TotalMilliseconds()
+    result = ParseJson(text)
+    if m.top.tag <> "" then print "[bili-json] op="; m.top.op; " tag="; m.top.tag; " chars="; Len(body); " rewriteMs="; rewriteMs; " totalMs="; timer.TotalMilliseconds()
+    return result
+end function
+
+' The ID pattern cannot cross a comma, so commas are safe boundaries even
+' inside JSON strings. Rejoining preserves every delimiter and escape.
+' Avoid roRegex.ReplaceAll repeatedly copying a large response for each ID.
+function quoteBiliIds(body as String) as String
+    if m.top.cancelled then return ""
+    replacement = """\1"":""\2"""
+    if Len(body) <= 8192 then return m.bigInts.ReplaceAll(body, replacement)
+    blocks = []
+    group = []
+    size = 0
+    for each part in body.Split(",")
+        group.Push(part)
+        size = size + Len(part) + 1
+        if size >= 8192 then
+            if m.top.cancelled then return ""
+            blocks.Push(m.bigInts.ReplaceAll(group.Join(","), replacement))
+            group = []
+            size = 0
+        end if
+    end for
+    if group.Count() > 0 then blocks.Push(m.bigInts.ReplaceAll(group.Join(","), replacement))
+    return blocks.Join(",")
 end function
 
 ' ---------- WBI signing ----------
