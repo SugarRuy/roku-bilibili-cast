@@ -195,6 +195,10 @@ sub closeKeywordEditor()
 end sub
 
 sub openInteractions()
+    refreshInteractions(false)
+end sub
+
+sub refreshInteractions(silent as Boolean)
     if not m.global.loggedIn then
         navigate({ action: "toast", text: "请先到“我的”扫码登录" })
         return
@@ -202,7 +206,7 @@ sub openInteractions()
     if m.req = invalid then return
     aid = strOf(m.req.aid)
     m.interactionTask = api("interactionstatus", { aid: aid }, "onInteractionStatus", aid)
-    navigate({ action: "toast", text: "正在读取互动状态…" })
+    if not silent then navigate({ action: "toast", text: "正在读取互动状态…" })
 end sub
 
 sub onInteractionStatus(event as Object)
@@ -215,24 +219,31 @@ sub onInteractionStatus(event as Object)
     end if
     m.interactionStatus = res.data
     labels = []
-    if intOf(res.data.liked) = 1 then
+    if intOf(res.data.liked) < 0 then
+        labels.Push("点赞状态暂不可用")
+    else if intOf(res.data.liked) = 1 then
         labels.Push("取消点赞")
     else
         labels.Push("点赞")
     end if
-    if intOf(res.data.favorite) = 1 then
+    if intOf(res.data.favorite) < 0 then
+        labels.Push("收藏状态暂不可用")
+    else if intOf(res.data.favorite) = 1 then
         labels.Push("取消收藏")
     else
         labels.Push("收藏到默认收藏夹")
     end if
-    if intOf(res.data.later) = 1 then
+    if intOf(res.data.later) < 0 then
+        labels.Push("稍后再看状态暂不可用")
+    else if intOf(res.data.later) = 1 then
         labels.Push("从稍后再看移除")
     else
         labels.Push("加入稍后再看")
     end if
-    coinLabel = "投币…"
+    coinLabel = "投币状态暂不可用"
     coins = intOf(res.data.coins)
-    if coins >= 0 then coinLabel = "投币…（已投 " + coins.ToStr() + "）"
+    if coins >= 0 and coins < 2 then coinLabel = "投币…（已投 " + coins.ToStr() + "）"
+    if coins >= 2 then coinLabel = "已投满 2 枚硬币"
     labels.Push(coinLabel)
     labels.Push("返回播放设置")
     m.interactionMenu.title = "互动"
@@ -248,17 +259,31 @@ sub onInteractionChosen()
         closeInteractionMenu()
         return
     end if
+    if m.interactionStatus = invalid then return
+    state = -1
+    if index = 0 then state = intOf(m.interactionStatus.liked)
+    if index = 1 then state = intOf(m.interactionStatus.favorite)
+    if index = 2 then state = intOf(m.interactionStatus.later)
+    if index = 3 then state = intOf(m.interactionStatus.coins)
+    if state < 0 then
+        navigate({ action: "toast", text: "当前状态暂不可用，请稍后重试" })
+        return
+    end if
     if index = 3 then
+        if state >= 2 then
+            navigate({ action: "toast", text: "这条视频已投满 2 枚硬币" })
+            return
+        end if
         m.interactionMenu.visible = false
         m.coinStep = "select"
         m.coinMenu.title = "投币"
         m.coinMenu.message = "选择数量；下一步仍需确认"
         m.coinMenu.options = ["取消", "投 1 枚", "投 2 枚"]
+        if state = 1 then m.coinMenu.options = ["取消", "投 1 枚"]
         m.coinMenu.visible = true
         m.coinMenu.setFocus(true)
         return
     end if
-    if m.interactionStatus = invalid then return
     if index = 1 and strOf(m.interactionStatus.folder) = "" then
         navigate({ action: "toast", text: "暂时无法读取收藏夹" })
         closeInteractionMenu()
@@ -292,10 +317,12 @@ sub onInteractionAction(event as Object)
     res = event.getData()
     if res.ok then
         navigate({ action: "toast", text: "操作成功" })
+        refreshInteractions(true)
     else
         navigate({ action: "toast", text: "操作失败：" + res.error })
+        m.interactionMenu.visible = true
+        m.interactionMenu.setFocus(true)
     end if
-    openInteractions()
 end sub
 
 sub onCoinChosen()
