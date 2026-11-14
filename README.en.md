@@ -4,6 +4,9 @@
 
 Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itself** — no computer or server has to stay on; you only need a computer to install it the first time and to update it later.
 
+> `main` includes new player settings and experimental background casting, with no new release yet.
+> The v0.1.7 download below does not include these additions. See the [implementation and validation status](docs/player-controls-plan.md) (Chinese).
+
 - Home: recommended, popular and ranking, with every video's publish date
 - Live streams: when you are logged in, the streamers you follow come first while they are live; switch quality from the remote
 - Search with pinyin-initial suggestions (type `ys` and 原神 comes up)
@@ -11,11 +14,13 @@ Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itsel
 - QR-code login, up to 1080P when logged in
 - Me: your account info and favourites
 - Watch history, which you can delete from the TV
-- Danmaku (bullet comments) with on/off, opacity and how much of the screen they may cover (25% / 50% / 75% / 100%)
+- Danmaku (bullet comments): on/off, opacity, screen area, size, speed, density, separate comment types and local keyword blocking
+- VOD quality: automatic or a playable tier returned by the API, with a saved preference; retains the existing ceiling of 1080P AVC
+- Player interactions: like, favourite, watch later and coins with a separate confirmation
 - Play modes: stop at the end, autoplay (moves on to the next related video you haven't watched) or repeat; during playback you can open a video list to jump to another part or another video
 - Watch progress syncs with your Bilibili account both ways: stop on the TV and continue on your phone, or the other way round
 - Multi-part videos, related videos, resume playback
-- Cast from a video's playback page in the Bilibili mobile app to the Roku on the same LAN (experimental; [usage and limits](docs/cast.md))
+- Cast from a video's playback page in the Bilibili mobile app on the same LAN; after opening the TV app once, casting can bring it back while its receiver process survives. Open the app again after a system reboot (experimental; [usage and limits](docs/cast.md)).
 - Theme colour (yellow / pink / blue / green / purple) and font (Kai / Hei / Song) in Settings
 
 The interface is in Chinese, as is Bilibili.
@@ -80,7 +85,7 @@ You need a Roku TV or player and a computer on the same LAN. The script below ru
 | Settings | Up/Down pick a row, Left/Right change it, applied immediately |
 | Video page | Down for related videos, Right for parts, 「UP主主页」 opens the uploader's page |
 | Uploader page | Up to switch between newest and most played; scrolling down loads more |
-| Player | **OK pauses / resumes**, Left/Right seek, **Down opens the video list** (parts, related videos), **Up opens playback settings** (play mode, danmaku on/off, opacity, screen area), Back exits (your position is saved) |
+| Player | **OK pauses / resumes**, Left/Right seek, **Down opens the video list** (parts, related videos), **Up opens playback settings** (danmaku toggle first, then detailed danmaku settings, quality, play mode, video list and interactions), Back exits (your position is saved) |
 | Live stream | Down switches quality, Up or OK shows the title, Back exits |
 | Search | Type on the on-screen keyboard; pinyin initials work |
 
