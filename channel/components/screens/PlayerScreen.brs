@@ -45,6 +45,7 @@ sub init()
     m.playSerial = 0
     m.pendingQuality = false
     m.switchingPlayback = false
+    m.qualityResumePending = false
     m.pauseAfterStart = false
     m.qualityChoice = loadSetting("vod_quality", "auto")
     m.appliedQualityChoice = m.qualityChoice
@@ -357,6 +358,7 @@ sub startPart(index as Integer, startAt as Integer, fmt as String)
     m.fmt = fmt
     m.pendingQuality = false
     m.switchingPlayback = false
+    m.qualityResumePending = false
     m.lastPlayData = invalid
     m.part = m.req.pages[index]
     m.lastSaved = startAt
@@ -399,6 +401,7 @@ sub onPlay(event as Object)
         m.pauseAfterStart = m.video.state = "paused"
         m.startAt = Int(m.video.position)
         m.switchingPlayback = true
+        m.qualityResumePending = m.startAt > 2
     end if
     applyPlayData(d, m.startAt)
     m.lastPlayData = d
@@ -440,7 +443,7 @@ sub onState()
             m.pauseAfterStart = false
             m.video.control = "pause"
         end if
-        if m.switchingPlayback then
+        if m.switchingPlayback and not m.qualityResumePending then
             m.switchingPlayback = false
             m.qualityBackup = invalid
         end if
@@ -454,6 +457,7 @@ sub onState()
         secs = Int(m.video.position)
         if m.switchingPlayback and m.qualityBackup <> invalid then
             m.switchingPlayback = false
+            m.qualityResumePending = false
             backup = m.qualityBackup
             m.qualityBackup = invalid
             restoreQualityChoice()
@@ -497,6 +501,16 @@ end sub
 
 sub onPosition()
     if m.castReleased then return
+    if m.qualityResumePending then
+        if Int(m.video.position) < m.startAt - 2 then
+            publishCastState()
+            return
+        end if
+        m.qualityResumePending = false
+        m.switchingPlayback = false
+        m.qualityBackup = invalid
+        print "[quality] resumed at="; m.video.position
+    end if
     publishCastState()
     secs = Int(m.video.position)
     if Abs(secs - m.lastSaved) >= 15 then save(false)

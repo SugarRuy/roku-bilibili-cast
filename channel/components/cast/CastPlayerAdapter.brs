@@ -31,5 +31,10 @@ sub publishCastState()
     if m.video.state = "finished" then state = 6
     generation = 0
     if m.req <> invalid then generation = intOf(m.req.castGeneration)
-    m.top.castState = { state: state, position: Int(m.video.position), duration: Int(m.video.duration), generation: generation }
+    position = Int(m.video.position)
+    if m.switchingPlayback and m.qualityResumePending and position < m.startAt - 2 then
+        state = 3
+        position = m.startAt
+    end if
+    m.top.castState = { state: state, position: position, duration: Int(m.video.duration), generation: generation }
 end sub
