@@ -32,7 +32,7 @@
 
 ## 安装
 
-需要一台 Roku 电视或 Roku 播放器，以及一台和它连在同一个 Wi-Fi 下的电脑（macOS 或 Linux）。
+需要一台 Roku 电视或 Roku 播放器，以及一台和它在同一局域网的电脑。下面的脚本适用于 macOS 和 Linux。
 
 1. **打开电视的开发者模式**：用遥控器依次按 Home ×3、上 ×2、右、左、右、左、右，按屏幕提示开启，并设置一个开发者密码。屏幕上会显示电视的 IP 地址。
 2. **下载这个项目**，在项目目录里填好电视信息：
@@ -49,6 +49,8 @@
    ```
 
    装好后 App 会自动打开，以后在 Roku 主屏幕上也能找到「狗哩狗哩」。之后更新代码，再运行一次这条命令即可。
+
+**Windows 或手动安装**：完成第 1 步后，下载 [v0.1.7 投屏测试版 ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.1.7/roku-bilibili-cast-v0.1.7.zip)，在浏览器打开 `http://电视显示的IP地址`，用 Roku 开发者账号登录并上传 ZIP。此版本是 [实验功能](docs/cast.md)。
 
 ## 使用
 
