@@ -6,9 +6,9 @@
 
 Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itself** — no computer or server has to stay on; you only need a computer to install it the first time and to update it later.
 
-> `main` includes new player settings and experimental background casting, with no new release yet.
-> The v0.1.7 download below does not include these additions. See the [implementation and validation status](docs/player-controls-plan.md) (Chinese).
-> `main` now uses the Roku小电视 name and new artwork; historical downloads still use the previous branding.
+> **v0.2.0 prerelease** includes the Roku小电视 name and artwork, smoother grid scrolling, new player settings and experimental background casting.
+> Intermittent danmaku stutter and some playback/interaction validation remain open. Read the [release notes and known limits](docs/releases/v0.2.0.md) (Chinese).
+> Historical v0.1.7 downloads use the previous branding and do not include these additions.
 
 - Home: recommended, popular and ranking, with every video's publish date
 - Live streams: when you are logged in, the streamers you follow come first while they are live; switch quality from the remote
@@ -62,7 +62,7 @@ You need a Roku TV or player and a computer on the same LAN. The script below ru
 
    The app opens by itself when the install finishes, and Roku小电视 stays on the Roku home screen. To update after pulling new code, run the same command again.
 
-**Windows or manual installation:** After step 1, download the [v0.1.7 casting ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.1.7/roku-bilibili-cast-v0.1.7.zip), open `http://<the IP shown on your TV>` in a browser, sign in with the Roku developer account, and upload the ZIP. Casting is [experimental](docs/cast.md).
+**Windows or manual installation:** After step 1, download the [v0.2.0 prerelease ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.2.0/roku-bilibili-cast-v0.2.0.zip), open `http://<the IP shown on your TV>` in a browser, sign in with the Roku developer account, and upload the ZIP. See the [release notes](docs/releases/v0.2.0.md) for features and validation limits.
 
 ## Using it
 
