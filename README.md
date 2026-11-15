@@ -6,9 +6,9 @@
 
 在 Roku 电视上直接看 B 站。**App 完全在电视上独立运行**，不需要电脑或服务器一直开着；电脑只在第一次安装和以后更新时用一下。
 
-> `main` 已合并新的播放设置和后台投屏实验功能，尚未发布新版。
-> 下方的 v0.1.7 下载包不包含这些新增内容；[实现与验收状态](docs/player-controls-plan.md)。
-> `main` 已采用「Roku小电视」名称和新图标；历史下载包仍使用旧名称。
+> **v0.2.0 预发布版**包含「Roku小电视」新名称和图标、列表滚动优化、新播放设置及实验性后台投屏。
+> 弹幕偶发停顿和部分播放／互动验收仍待完善；请先阅读[版本说明与已知限制](docs/releases/v0.2.0.md)。
+> v0.1.7 历史下载包仍使用旧名称，不包含本次新增功能。
 
 - 首页：推荐、热门、排行，每个视频都显示发布时间
 - 直播：登录后你关注的主播开播了会排在最前面，可以切换画质
@@ -60,7 +60,7 @@
 
    装好后 App 会自动打开，以后在 Roku 主屏幕上也能找到「Roku小电视」。之后更新代码，再运行一次这条命令即可。
 
-**Windows 或手动安装**：完成第 1 步后，下载 [v0.1.7 投屏测试版 ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.1.7/roku-bilibili-cast-v0.1.7.zip)，在浏览器打开 `http://电视显示的IP地址`，用 Roku 开发者账号登录并上传 ZIP。此版本是 [实验功能](docs/cast.md)。
+**Windows 或手动安装**：完成第 1 步后，下载 [v0.2.0 预发布版 ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.2.0/roku-bilibili-cast-v0.2.0.zip)，在浏览器打开 `http://电视显示的IP地址`，用 Roku 开发者账号登录并上传 ZIP。[版本说明](docs/releases/v0.2.0.md)列出了功能与验证范围。
 
 ## 使用
 
