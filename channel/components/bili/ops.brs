@@ -23,6 +23,8 @@ sub execute()
         res = opPlay(p)
     else if op = "danmaku" then
         res = opDanmaku(p)
+    else if op = "comments" then
+        res = opComments(p)
     else if op = "interactionstatus" then
         res = opInteractionStatus(p)
     else if op = "interactionaction" then

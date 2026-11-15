@@ -16,5 +16,6 @@
   <script type="text/brightscript" uri="pkg:/components/common/fmp4.brs" />
   <script type="text/brightscript" uri="qr.brs" />
   <script type="text/brightscript" uri="grid_text.brs" />
+  <script type="text/brightscript" uri="comments.brs" />
   <script type="text/brightscript" uri="ops.brs" />
 </component>

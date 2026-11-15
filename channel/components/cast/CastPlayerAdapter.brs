@@ -13,6 +13,7 @@ sub onPlayerCastCommand()
         applyDanmakuSettings()
     else if action = "stop" or action = "release" then
         m.castReleased = true
+        m.comments.visible = false
         if m.playTask <> invalid then m.playTask.cancelled = true
         if m.videoTask <> invalid then m.videoTask.cancelled = true
         if m.relatedTask <> invalid then m.relatedTask.cancelled = true

@@ -18,6 +18,7 @@
     <field id="actualQuality" type="string" />
     <field id="keywordRequested" type="boolean" alwaysNotify="true" />
     <field id="listRequested" type="boolean" alwaysNotify="true" />
+    <field id="commentsRequested" type="boolean" alwaysNotify="true" />
     <field id="interactionRequested" type="boolean" alwaysNotify="true" />
     <field id="count" type="integer" onChange="paint" />
     <field id="closed" type="boolean" alwaysNotify="true" />

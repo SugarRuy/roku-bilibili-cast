@@ -27,6 +27,7 @@
     <Label id="error" translation="[160,470]" width="1600" horizAlign="center" wrap="true" color="0xFFFFFFFF" visible="false" />
     <PlayList id="list" visible="false" />
     <PlayerPanel id="panel" visible="false" />
+    <CommentsPanel id="comments" visible="false" />
     <KeywordEditor id="keywordEditor" visible="false" />
     <ActionMenu id="interactionMenu" visible="false" />
     <ActionMenu id="coinMenu" visible="false" />

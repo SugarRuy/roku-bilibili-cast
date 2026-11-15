@@ -10,6 +10,11 @@ Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itsel
 > Intermittent danmaku stutter and some playback/interaction validation remain open. Read the [release notes and known limits](docs/releases/v0.2.0.md) (Chinese).
 > Historical v0.1.7 downloads use the previous branding and do not include these additions.
 
+> **Feature branch** `feature/player-comments` adds a comments drawer inside player
+> settings. Reading shrinks the video and temporarily hides danmaku; closing restores
+> both. Hot comments, full text and replies are available for testing, not yet merged
+> or released. See [behavior and validation](docs/comments.md) (Chinese).
+
 - Home: recommended, popular and ranking, with every video's publish date
 - Live streams: when you are logged in, the streamers you follow come first while they are live; switch quality from the remote
 - Search with pinyin-initial suggestions (type `ys` and 原神 comes up)
