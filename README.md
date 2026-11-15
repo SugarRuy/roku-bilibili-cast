@@ -58,7 +58,11 @@
    scripts/deploy.sh
    ```
 
-   装好后 App 会自动打开，以后在 Roku 主屏幕上也能找到「Roku小电视」。之后更新代码，再运行一次这条命令即可。
+   装好后 App 会自动打开，以后在 Roku 主屏幕的 Apps 列表中找到「Roku BiliBiliTV」。
+   系统列表使用英文名以避免系统字体将中文显示为空框；磁贴、App 内及手机投屏名称为「Roku小电视」。
+   之后更新代码，再运行一次这条命令即可。
+
+   此名称修正在 `fix/roku-system-title` 分支准备；下方 v0.2.0 下载包的系统名称仍为中文。
 
 **Windows 或手动安装**：完成第 1 步后，下载 [v0.2.0 预发布版 ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.2.0/roku-bilibili-cast-v0.2.0.zip)，在浏览器打开 `http://电视显示的IP地址`，用 Roku 开发者账号登录并上传 ZIP。[版本说明](docs/releases/v0.2.0.md)列出了功能与验证范围。
 

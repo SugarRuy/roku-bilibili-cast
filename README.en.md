@@ -1,4 +1,4 @@
-# Roku小电视 (Roku Little TV) — a Bilibili client for Roku
+# Roku小电视 (Roku BiliBiliTV) — a Bilibili client for Roku
 
 [中文](README.md) | English
 
@@ -60,7 +60,11 @@ You need a Roku TV or player and a computer on the same LAN. The script below ru
    scripts/deploy.sh
    ```
 
-   The app opens by itself when the install finishes, and Roku小电视 stays on the Roku home screen. To update after pulling new code, run the same command again.
+   The app opens by itself when the install finishes. Find **Roku BiliBiliTV** in the Roku home screen's Apps list.
+   The system name uses English to avoid missing Chinese glyphs; the tile artwork, in-app name and phone casting name remain Roku小电视.
+   To update after pulling new code, run the same command again.
+
+   This name correction is being prepared on `fix/roku-system-title`; the v0.2.0 download below still uses the Chinese system name.
 
 **Windows or manual installation:** After step 1, download the [v0.2.0 prerelease ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.2.0/roku-bilibili-cast-v0.2.0.zip), open `http://<the IP shown on your TV>` in a browser, sign in with the Roku developer account, and upload the ZIP. See the [release notes](docs/releases/v0.2.0.md) for features and validation limits.
 
