@@ -7,6 +7,7 @@ sub onPlayerCastCommand()
         return
     end if
     if m.castReleased then return
+    if action = "pause" or action = "resume" or action = "seek" then cancelSeek(false)
     if action = "pause" then
         m.video.control = "pause"
     else if action = "resume" then
@@ -18,12 +19,14 @@ sub onPlayerCastCommand()
         m.panel.enabled = command.enabled
         applyDanmakuSettings()
     end if
+    paintPlaybackProgress()
     publishCastState()
 end sub
 
 ' Shared by Back, deep links, cast replacement and Home. Safe to call twice.
 sub releasePlayback(savePosition = true as Boolean)
     if m.castReleased then return
+    cancelSeek(false)
     m.castReleased = true
     if savePosition and m.req <> invalid then save(false, true)
     m.comments.visible = false

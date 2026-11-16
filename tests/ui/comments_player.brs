@@ -3,6 +3,8 @@ sub main()
     m.checks = 0
     m.top = fakeNode()
     m.video = fakeNode()
+    m.playbackInput = fakeNode()
+    m.seekActive = false
     m.video.state = "playing"
     m.video.position = 125
     m.video.content = { id: "keep-this-stream" }

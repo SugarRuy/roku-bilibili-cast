@@ -8,10 +8,12 @@
   </interface>
   <script type="text/brightscript" uri="pkg:/components/common/utils.brs" />
   <script type="text/brightscript" uri="PlayerScreen.brs" />
+  <script type="text/brightscript" uri="PlayerSeek.brs" />
   <script type="text/brightscript" uri="pkg:/components/cast/CastPlayerAdapter.brs" />
   <children>
     <Rectangle width="1920" height="1080" color="0x000000FF" />
-    <Video id="video" width="1920" height="1080" />
+    <Video id="video" width="1920" height="1080" enableUI="false" />
+    <Group id="playbackInput" />
     <DanmakuLayer id="danmaku" />
     <Group id="hud" visible="false">
       <Poster uri="pkg:/images/scrim_top.png" width="1920" height="280" />
@@ -19,6 +21,15 @@
       <Label id="sub" translation="[96,114]" width="1420" maxLines="1" color="0xB4B4C0FF" />
       <Label id="quality" translation="[1520,118]" width="304" horizAlign="right" />
       <Label id="dmHint" translation="[824,165]" width="1000" horizAlign="right" color="0xFB7299FF" />
+      <Rectangle translation="[0,824]" width="1920" height="256" color="0x11131EEB" />
+      <Group id="seekControls" translation="[96,864]">
+        <Label id="seekLabel" width="900" height="44" color="0xFFFFFFFF" />
+        <Label id="seekTime" translation="[928,0]" width="800" height="44" horizAlign="right" color="0xFFFFFFFF" />
+        <Rectangle translation="[0,74]" width="1728" height="8" color="0xFFFFFF55" />
+        <Rectangle id="seekFill" translation="[0,74]" width="0" height="8" />
+        <Rectangle id="seekMarker" translation="[-5,68]" width="10" height="20" />
+        <Label id="seekHint" translation="[0,110]" width="1728" height="44" color="0xB4B4C0FF" />
+      </Group>
     </Group>
     <Group id="loading">
       <BusySpinner id="spinner" translation="[928,470]" />
@@ -32,5 +43,6 @@
     <ActionMenu id="interactionMenu" visible="false" />
     <ActionMenu id="coinMenu" visible="false" />
     <Timer id="hudTimer" duration="4" />
+    <Timer id="seekHoldTimer" duration="0.1" repeat="true" />
   </children>
 </component>

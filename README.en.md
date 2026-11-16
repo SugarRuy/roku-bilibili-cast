@@ -35,6 +35,11 @@ The interface is in Chinese, as is Bilibili.
 
 ## Screenshots
 
+The unmerged `fix/remote-seek-controls` branch adds pause-to-seek controls:
+Rewind/Fast Forward opens the position picker, subsequent presses move the target,
+OK/Play commits, and Back cancels. It includes the pending comments feature and
+playback cleanup fixes. See the [behavior and device observations](docs/remote-seek.md).
+
 These screenshots show the previous name and artwork.
 
 | Home | Video page |
