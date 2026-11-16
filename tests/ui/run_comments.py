@@ -65,6 +65,21 @@ end sub
             ])
         ),
     }
+    scene_doubles = functions("tests/ui/comments_panel.brs", [
+        "fakeNode", "findFake", "createFake", "focusFake",
+        "hasFakeFocus", "observeFake", "cjkFont",
+    ])
+    video_doubles = functions("tests/ui/danmaku_lifecycle.brs", [
+        "testVideo", "observeVideo", "unobserveVideo", "sameVideo",
+    ])
+    suites["danmaku_lifecycle"] = (
+        ROOT.joinpath("channel/components/widgets/DanmakuLayer.brs").read_text(encoding="utf-8")
+        + scene_doubles
+    )
+    suites["playback_release"] = (
+        ROOT.joinpath("channel/components/cast/CastPlayerAdapter.brs").read_text(encoding="utf-8")
+        + video_doubles
+    )
     for name, source in suites.items():
         harness = ROOT.joinpath(f"tests/ui/{name}.brs").read_text(encoding="utf-8")
         target = BUILD / f"{name}.brs"

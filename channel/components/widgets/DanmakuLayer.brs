@@ -137,11 +137,29 @@ end sub
 ' ---------- clock: video position, extrapolated between notifications ----------
 
 sub onVideo()
+    unbindVideo()
     v = m.top.video
-    if v = invalid then return
+    if v = invalid or not m.top.enabled then return
+    m.boundVideo = v
     m.lastVideoState = ""
-    v.observeField("position", "onPosition")
-    v.observeField("state", "onState")
+    v.observeFieldScoped("position", "onPosition")
+    v.observeFieldScoped("state", "onState", ["position"])
+    ' Only binding/re-enabling reads the initial snapshot. Steady-state callbacks
+    ' consume the event values instead of reading back from the decoder node.
+    seekTo(v.position)
+    updatePlaybackState(v.state, m.basePos)
+end sub
+
+sub unbindVideo()
+    if m.boundVideo <> invalid then
+        m.boundVideo.unobserveFieldScoped("position")
+        m.boundVideo.unobserveFieldScoped("state")
+    end if
+    m.boundVideo = invalid
+    m.basePos = now()
+    m.playing = false
+    m.tick.control = "stop"
+    clearAll()
 end sub
 
 function now() as Float
@@ -149,8 +167,10 @@ function now() as Float
     return m.basePos
 end function
 
-sub onPosition()
-    p = m.top.video.position
+sub onPosition(event as Object)
+    if not m.top.enabled or m.boundVideo = invalid then return
+    if not event.getRoSGNode().isSameNode(m.boundVideo) then return
+    p = event.getData()
     if Abs(p - now()) > 1.5 then
         seekTo(p)   ' the viewer jumped
     else
@@ -159,13 +179,23 @@ sub onPosition()
     end if
 end sub
 
-sub onState()
-    s = m.top.video.state
+sub onState(event as Object)
+    if not m.top.enabled or m.boundVideo = invalid then return
+    if not event.getRoSGNode().isSameNode(m.boundVideo) then return
+    info = event.getInfo()
+    position = m.basePos
+    if info <> invalid then
+        if info.position <> invalid then position = info.position
+    end if
+    updatePlaybackState(event.getData(), position)
+end sub
+
+sub updatePlaybackState(s as String, position as Float)
     if s = m.lastVideoState then return
     m.lastVideoState = s
     if s = "playing" then
         if not m.playing then
-            m.basePos = m.top.video.position
+            m.basePos = position
             m.clock.Mark()
             m.playing = true
             setAnimations("resume")
@@ -210,6 +240,8 @@ end function
 ' ---------- data ----------
 
 sub onCid()
+    if m.task <> invalid then m.task.cancelled = true
+    m.task = invalid
     clearAll()
     m.items = []
     m.cursor = 0
@@ -219,6 +251,9 @@ sub onCid()
 end sub
 
 sub onLoaded(event as Object)
+    if m.task = invalid then return
+    if not event.getRoSGNode().isSameNode(m.task) then return
+    m.task = invalid
     res = event.getData()
     if not res.ok then return
     if strOf(res.data.cid) <> m.top.cid then return
@@ -231,11 +266,9 @@ sub onEnabled()
     if m.top.enabled then
         ensurePool(m.maxActive)
         m.top.visible = true
-        m.cursor = lowerBound(now())
-        if m.playing then m.tick.control = "start"
+        onVideo()
     else
-        m.tick.control = "stop"
-        clearAll()
+        unbindVideo()
         m.top.visible = false
     end if
 end sub
