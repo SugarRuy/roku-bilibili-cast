@@ -70,6 +70,10 @@ end sub
         "fakeNode", "findFake", "createFake", "focusFake",
         "hasFakeFocus", "observeFake", "cjkFont",
     ])
+    request_helpers = functions("channel/components/screens/PlayerScreen.brs", [
+        "cancelPlayerTask", "ownsPlayerTask",
+    ])
+    suites["comments_player"] += request_helpers
     video_doubles = functions("tests/ui/danmaku_lifecycle.brs", [
         "testVideo", "observeVideo", "unobserveVideo", "sameVideo",
     ])
@@ -85,6 +89,14 @@ end sub
     suites["remote_seek"] = (
         seek_source + scene_doubles
         + functions("channel/components/screens/PlayerScreen.brs", ["onKeyEvent"])
+    )
+    suites["player_requests"] = (
+        scene_doubles + request_helpers + functions("channel/components/screens/PlayerScreen.brs", [
+            "openVideo", "onVideoInfo", "loadRelated", "onRelatedLoaded",
+            "startPart", "requestStream", "onPlay", "onState", "onQualityChoice",
+            "restoreQualityChoice", "refreshInteractions", "onInteractionStatus",
+            "submitInteraction", "onInteractionAction", "closePanel",
+        ])
     )
     for name, source in suites.items():
         harness = ROOT.joinpath(f"tests/ui/{name}.brs").read_text(encoding="utf-8")

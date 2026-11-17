@@ -42,6 +42,7 @@ sub init()
     m.related = []
     m.played = {}
     m.castReleased = false
+    m.loadingVideo = false
     m.playSerial = 0
     m.pendingQuality = false
     m.switchingPlayback = false
@@ -159,7 +160,7 @@ sub onQualityChoice()
     if choice = m.qualityChoice then return
     m.qualityChoice = choice
     saveSetting("vod_quality", choice)
-    if m.req = invalid or m.part = invalid then return
+    if m.castReleased or m.loadingVideo or m.req = invalid or m.part = invalid then return
     m.pendingQuality = m.video.state = "playing" or m.video.state = "paused"
     if m.pendingQuality then m.qualityFromChoice = m.appliedQualityChoice
     requestStream("auto")
@@ -202,18 +203,22 @@ sub openInteractions()
 end sub
 
 sub refreshInteractions(silent as Boolean)
+    if m.castReleased or m.loadingVideo or not m.panel.visible then return
     if not m.global.loggedIn then
         navigate({ action: "toast", text: "请先到“我的”扫码登录" })
         return
     end if
     if m.req = invalid then return
     aid = strOf(m.req.aid)
+    cancelPlayerTask("interactionTask")
     m.interactionTask = api("interactionstatus", { aid: aid }, "onInteractionStatus", aid)
     if not silent then navigate({ action: "toast", text: "正在读取互动状态…" })
 end sub
 
 sub onInteractionStatus(event as Object)
-    if m.castReleased or m.req = invalid then return
+    if not ownsPlayerTask("interactionTask", event) then return
+    m.interactionTask = invalid
+    if m.req = invalid or m.loadingVideo or not m.panel.visible then return
     if event.getRoSGNode().tag <> strOf(m.req.aid) then return
     res = event.getData()
     if not res.ok then
@@ -307,6 +312,12 @@ sub onInteractionChosen()
 end sub
 
 sub submitInteraction(action as String, value as Integer)
+    if m.castReleased or m.loadingVideo or m.req = invalid or m.interactionStatus = invalid then return
+    if m.interactionActionTask <> invalid then
+        navigate({ action: "toast", text: "操作仍在处理中，请稍候" })
+        return
+    end if
+    cancelPlayerTask("interactionTask")
     m.interactionMenu.visible = false
     m.coinMenu.visible = false
     m.panel.setFocus(true)
@@ -315,7 +326,9 @@ sub submitInteraction(action as String, value as Integer)
 end sub
 
 sub onInteractionAction(event as Object)
-    if m.castReleased or m.req = invalid then return
+    if not ownsPlayerTask("interactionActionTask", event) then return
+    m.interactionActionTask = invalid
+    if m.req = invalid then return
     if event.getRoSGNode().tag <> strOf(m.req.aid) then return
     res = event.getData()
     if res.ok then
@@ -323,8 +336,10 @@ sub onInteractionAction(event as Object)
         refreshInteractions(true)
     else
         navigate({ action: "toast", text: "操作失败：" + res.error })
-        m.interactionMenu.visible = true
-        m.interactionMenu.setFocus(true)
+        if m.panel.visible then
+            m.interactionMenu.visible = true
+            m.interactionMenu.setFocus(true)
+        end if
     end if
 end sub
 
@@ -381,6 +396,7 @@ sub openPanel()
 end sub
 
 sub closePanel()
+    cancelPlayerTask("interactionTask")
     m.panel.visible = false
     m.playbackInput.setFocus(true)
     showHud(true)
@@ -390,6 +406,7 @@ end sub
 
 sub openComments()
     if m.req = invalid then return
+    cancelPlayerTask("interactionTask")
     cancelSeek()
     m.panel.visible = false
     m.list.visible = false
@@ -511,13 +528,16 @@ sub onListChosen()
 end sub
 
 sub loadRelated(bvid as String)
+    if m.castReleased then return
+    cancelPlayerTask("relatedTask")
     m.related = []
     buildList()
     m.relatedTask = api("related", { bvid: bvid }, "onRelatedLoaded")
 end sub
 
 sub onRelatedLoaded(event as Object)
-    if m.castReleased then return
+    if not ownsPlayerTask("relatedTask", event) then return
+    m.relatedTask = invalid
     res = event.getData()
     if not res.ok or m.req = invalid then return
     m.related = res.data.items
@@ -526,7 +546,23 @@ end sub
 
 ' ---------- one video, several parts ----------
 
+' Invalidation is immediate; HTTP cancellation completes on the Task thread.
+' A completed request must own its slot before it can update this player.
+sub cancelPlayerTask(name as String)
+    task = m[name]
+    if task <> invalid then task.cancelled = true
+    m[name] = invalid
+end sub
+
+function ownsPlayerTask(name as String, event as Object) as Boolean
+    if m.castReleased then return false
+    task = m[name]
+    if task = invalid then return false
+    return task.isSameNode(event.getRoSGNode())
+end function
+
 sub onRequest()
+    if m.castReleased then return
     r = m.top.request
     m.req = r
     m.comments.aid = strOf(r.aid)
@@ -538,7 +574,22 @@ end sub
 ' Switch to another video (from the drawer, or the next one in 自动连播):
 ' fetch its parts, then carry on where this TV last left it.
 sub openVideo(card as Object)
+    if m.castReleased then return
     cancelSeek(false)
+    for each name in ["playTask", "videoTask", "relatedTask", "interactionTask", "interactionActionTask"]
+        cancelPlayerTask(name)
+    end for
+    m.loadingVideo = true
+    m.pendingQuality = false
+    m.switchingPlayback = false
+    m.qualityResumePending = false
+    m.pauseAfterStart = false
+    m.qualityBackup = invalid
+    m.interactionStatus = invalid
+    m.interactionMenu.visible = false
+    m.coinMenu.visible = false
+    m.related = []
+    buildList()
     m.comments.aid = ""
     m.video.control = "stop"
     m.error.visible = false
@@ -550,7 +601,8 @@ sub openVideo(card as Object)
 end sub
 
 sub onVideoInfo(event as Object)
-    if m.castReleased then return
+    if not ownsPlayerTask("videoTask", event) then return
+    m.videoTask = invalid
     res = event.getData()
     if not res.ok then
         showError("视频加载失败：" + res.error)
@@ -561,6 +613,7 @@ sub onVideoInfo(event as Object)
         showError("这个视频没有可以播放的内容")
         return
     end if
+    m.loadingVideo = false
     m.req = { bvid: v.bvid, aid: v.aid, title: v.title, up: v.up, poster: v.poster, pages: v.pages }
     m.comments.aid = strOf(v.aid)
     m.played[strOf(v.bvid)] = true
@@ -586,7 +639,11 @@ function nextVideo() as Dynamic
 end function
 
 sub startPart(index as Integer, startAt as Integer, fmt as String)
+    if m.castReleased then return
     cancelSeek(false)
+    cancelPlayerTask("videoTask")
+    cancelPlayerTask("interactionTask")
+    m.loadingVideo = false
     m.interactionMenu.visible = false
     m.coinMenu.visible = false
     m.index = index
@@ -595,6 +652,8 @@ sub startPart(index as Integer, startAt as Integer, fmt as String)
     m.pendingQuality = false
     m.switchingPlayback = false
     m.qualityResumePending = false
+    m.pauseAfterStart = false
+    m.qualityBackup = invalid
     m.lastPlayData = invalid
     m.part = m.req.pages[index]
     m.lastSaved = startAt
@@ -611,14 +670,16 @@ sub startPart(index as Integer, startAt as Integer, fmt as String)
 end sub
 
 sub requestStream(fmt as String)
-    if m.playTask <> invalid then m.playTask.cancelled = true
+    if m.castReleased then return
+    cancelPlayerTask("playTask")
     m.playSerial = m.playSerial + 1
     m.playTask = api("play", { bvid: m.req.bvid, cid: strOf(m.part.cid), fmt: fmt, quality: m.qualityChoice }, "onPlay", m.playSerial.ToStr())
 end sub
 
 sub onPlay(event as Object)
-    if m.castReleased then return
+    if not ownsPlayerTask("playTask", event) then return
     if event.getRoSGNode().tag <> m.playSerial.ToStr() then return
+    m.playTask = invalid
     res = event.getData()
     if not res.ok then
         if m.pendingQuality then
@@ -673,6 +734,8 @@ sub onState()
     if m.castReleased then return
     publishCastState()
     paintPlaybackProgress()
+    ' Stop/error/finished from the retired stream cannot undo a new selection.
+    if m.loadingVideo then return
     s = m.video.state
     if s = "playing" then
         m.loading.visible = false
