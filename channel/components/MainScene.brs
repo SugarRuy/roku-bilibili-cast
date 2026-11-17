@@ -91,6 +91,7 @@ end sub
 sub pop()
     if m.stack.Count() <= 1 then return
     screen = m.stack.Pop()
+    if screen.Subtype() = "PlayerScreen" then screen.castCommand = { action: "release" }
     m.container.removeChild(screen)
     top = m.stack.Peek()
     top.visible = true

@@ -1,6 +1,12 @@
 sub onPlayerCastCommand()
     command = m.top.castCommand
     action = strOf(command.action)
+    if action = "stop" or action = "release" then
+        releasePlayback()
+        if action = "stop" then navigate({ action: "back" })
+        return
+    end if
+    if m.castReleased then return
     if action = "pause" then
         m.video.control = "pause"
     else if action = "resume" then
@@ -11,16 +17,26 @@ sub onPlayerCastCommand()
     else if action = "danmaku" then
         m.panel.enabled = command.enabled
         applyDanmakuSettings()
-    else if action = "stop" or action = "release" then
-        m.castReleased = true
-        m.comments.visible = false
-        if m.playTask <> invalid then m.playTask.cancelled = true
-        if m.videoTask <> invalid then m.videoTask.cancelled = true
-        if m.relatedTask <> invalid then m.relatedTask.cancelled = true
-        if m.req <> invalid then save(false, true)
-        m.video.control = "stop"
-        if action = "stop" then navigate({ action: "back" })
     end if
+    publishCastState()
+end sub
+
+' Shared by Back, deep links, cast replacement and Home. Safe to call twice.
+sub releasePlayback(savePosition = true as Boolean)
+    if m.castReleased then return
+    m.castReleased = true
+    if savePosition and m.req <> invalid then save(false, true)
+    m.comments.visible = false
+    m.hudTimer.control = "stop"
+    m.danmaku.enabled = false
+    m.danmaku.video = invalid
+    m.danmaku.cid = ""
+    for each task in [m.playTask, m.videoTask, m.relatedTask, m.interactionTask, m.interactionActionTask]
+        if task <> invalid then task.cancelled = true
+    end for
+    m.video.unobserveFieldScoped("position")
+    m.video.unobserveFieldScoped("state")
+    m.video.control = "stop"
     publishCastState()
 end sub
 
@@ -32,6 +48,10 @@ sub publishCastState()
     if m.video.state = "finished" then state = 6
     generation = 0
     if m.req <> invalid then generation = intOf(m.req.castGeneration)
+    if m.castReleased then
+        m.top.castState = { state: 7, position: 0, duration: 0, generation: generation }
+        return
+    end if
     position = Int(m.video.position)
     if m.switchingPlayback and m.qualityResumePending and position < 1 then
         state = 3

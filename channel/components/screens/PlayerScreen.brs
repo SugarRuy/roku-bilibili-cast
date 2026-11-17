@@ -33,8 +33,8 @@ sub init()
     m.video.retrievingBar.filledBarBlendColor = accent()
     m.video.notificationInterval = 1
 
-    m.video.observeField("state", "onState")
-    m.video.observeField("position", "onPosition")
+    m.video.observeFieldScoped("state", "onState")
+    m.video.observeFieldScoped("position", "onPosition")
     m.hudTimer.observeField("fire", "hideHud")
     m.top.observeField("focusedChild", "onFocusChanged")
     m.lastSaved = 0
@@ -729,7 +729,7 @@ sub onFinished()
     else if mode = "next" and nextVideo() <> invalid then
         openVideo(nextVideo())
     else
-        m.comments.visible = false
+        releasePlayback(false)
         navigate({ action: "back" })
     end if
 end sub
@@ -824,9 +824,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
     if not press then return false
     if key = "back" then
-        m.comments.visible = false
-        if m.video.state = "playing" or m.video.state = "paused" or m.video.state = "buffering" then save(false, true)
-        m.video.control = "stop"
+        releasePlayback()
         navigate({ action: "back" })
         return true
     ' Roku TVs keep * for their own picture menu during playback, so the panels live on up/down
