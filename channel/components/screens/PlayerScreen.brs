@@ -10,6 +10,7 @@ sub init()
     m.hudTimer = m.top.findNode("hudTimer")
     m.danmaku = m.top.findNode("danmaku")
     m.panel = m.top.findNode("panel")
+    m.comments = m.top.findNode("comments")
     m.keywordEditor = m.top.findNode("keywordEditor")
     m.interactionMenu = m.top.findNode("interactionMenu")
     m.coinMenu = m.top.findNode("coinMenu")
@@ -82,6 +83,9 @@ sub init()
     m.panel.observeField("bottomEnabled", "onPanelSettings")
     m.panel.observeField("keywordRequested", "openKeywordEditor")
     m.panel.observeField("listRequested", "onPanelList")
+    m.panel.observeField("commentsRequested", "openComments")
+    m.comments.observeField("closed", "closeComments")
+    m.comments.observeField("togglePlayback", "toggleCommentPlayback")
     m.panel.observeField("qualityChoice", "onQualityChoice")
     m.panel.observeField("interactionRequested", "openInteractions")
     m.keywordEditor.observeField("updated", "onKeywordsUpdated")
@@ -106,7 +110,9 @@ sub applyDanmakuSettings()
     if m.danmaku.topEnabled <> m.panel.topEnabled then m.danmaku.topEnabled = m.panel.topEnabled
     if m.danmaku.bottomEnabled <> m.panel.bottomEnabled then m.danmaku.bottomEnabled = m.panel.bottomEnabled
     if m.danmaku.opacity <> m.panel.alpha then m.danmaku.opacity = m.panel.alpha
-    if m.danmaku.enabled <> m.panel.enabled then m.danmaku.enabled = m.panel.enabled
+    ' Reading comments temporarily suppresses rendering, without changing dm_on.
+    enabled = m.panel.enabled and not m.comments.visible
+    if m.danmaku.enabled <> enabled then m.danmaku.enabled = enabled
 end sub
 
 function storedKeywords() as Object
@@ -370,6 +376,7 @@ sub onDanmakuCount()
 end sub
 
 sub openPanel()
+    if m.comments.visible then closeComments()
     m.panel.visible = true
     m.panel.setFocus(true)
     showHud(false)
@@ -381,10 +388,63 @@ sub closePanel()
     showHud(true)
 end sub
 
+' ---------- comments share the settings drawer footprint ----------
+
+sub openComments()
+    if m.req = invalid then return
+    m.panel.visible = false
+    m.list.visible = false
+    m.comments.aid = strOf(m.req.aid)
+    m.comments.visible = true
+    layoutCommentVideo()
+    applyDanmakuSettings()
+    m.hud.visible = false
+    m.hudTimer.control = "stop"
+    m.comments.setFocus(true)
+    print "[comments-ui] open width="; m.video.width; " state="; m.video.state; " dm="; m.danmaku.enabled
+end sub
+
+sub closeComments()
+    m.comments.visible = false
+    layoutCommentVideo()
+    applyDanmakuSettings()
+    m.video.setFocus(true)
+    showHud(true)
+    print "[comments-ui] close width="; m.video.width; " state="; m.video.state; " dm="; m.danmaku.enabled
+end sub
+
+sub layoutCommentVideo()
+    ' Resize the existing decoder surface; never replace content or restart play.
+    if m.comments.visible then
+        m.video.translation = [0, 158]
+        m.video.width = 1360
+        m.video.height = 765
+        m.spinner.translation = [648, 470]
+        m.top.findNode("loadingText").width = 1360
+        m.error.width = 1040
+    else
+        m.video.translation = [0, 0]
+        m.video.width = 1920
+        m.video.height = 1080
+        m.spinner.translation = [928, 470]
+        m.top.findNode("loadingText").width = 1920
+        m.error.width = 1600
+    end if
+end sub
+
+sub toggleCommentPlayback()
+    if m.video.state = "playing" then
+        m.video.control = "pause"
+    else if m.video.state = "paused" then
+        m.video.control = "resume"
+    end if
+end sub
+
 ' ---------- the video list drawer ----------
 
 sub openList()
     if m.list.content = invalid then return
+    if m.comments.visible then closeComments()
     if m.req.pages.Count() > 1 then
         m.list.focusItem = [0, m.index]
     else
@@ -469,6 +529,7 @@ end sub
 sub onRequest()
     r = m.top.request
     m.req = r
+    m.comments.aid = strOf(r.aid)
     m.played[strOf(r.bvid)] = true
     loadRelated(strOf(r.bvid))
     startPart(intOf(r.index), intOf(r.startAt), "auto")
@@ -477,6 +538,7 @@ end sub
 ' Switch to another video (from the drawer, or the next one in 自动连播):
 ' fetch its parts, then carry on where this TV last left it.
 sub openVideo(card as Object)
+    m.comments.aid = ""
     m.video.control = "stop"
     m.error.visible = false
     m.loading.visible = true
@@ -499,6 +561,7 @@ sub onVideoInfo(event as Object)
         return
     end if
     m.req = { bvid: v.bvid, aid: v.aid, title: v.title, up: v.up, poster: v.poster, pages: v.pages }
+    m.comments.aid = strOf(v.aid)
     m.played[strOf(v.bvid)] = true
     index = 0
     startAt = 0
@@ -600,7 +663,7 @@ sub applyPlayData(d as Object, startAt as Integer)
     if startAt > 0 then c.PlayStart = startAt
     m.video.content = c
     m.video.control = "play"
-    if not m.list.visible and not m.panel.visible then m.video.setFocus(true)
+    if not m.list.visible and not m.panel.visible and not m.comments.visible then m.video.setFocus(true)
 end sub
 
 sub onState()
@@ -666,6 +729,7 @@ sub onFinished()
     else if mode = "next" and nextVideo() <> invalid then
         openVideo(nextVideo())
     else
+        m.comments.visible = false
         navigate({ action: "back" })
     end if
 end sub
@@ -715,12 +779,17 @@ sub report(secs as Integer, force as Boolean)
 end sub
 
 sub showHud(autoHide as Boolean)
-    m.hud.visible = true
     m.hudTimer.control = "stop"
+    m.hud.visible = not m.comments.visible
+    if m.comments.visible then return
     if autoHide then m.hudTimer.control = "start"
 end sub
 
 sub hideHud()
+    if m.comments.visible then
+        m.hud.visible = false
+        return
+    end if
     if m.video.state <> "paused" and not m.panel.visible then m.hud.visible = false
 end sub
 
@@ -731,10 +800,16 @@ sub showError(text as String)
 end sub
 
 sub onFocusChanged()
-    if m.top.hasFocus() then m.video.setFocus(true)
+    if not m.top.hasFocus() then return
+    if m.comments.visible then
+        m.comments.setFocus(true)
+    else
+        m.video.setFocus(true)
+    end if
 end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
+    if m.comments.visible then return true
     ' The Video node swallows the OK press (it uses it for its own bar), so the
     ' centre button toggles pause on release -- unless the press itself just moved
     ' the video (confirming a seek), which would make this a double toggle.
@@ -749,6 +824,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
     if not press then return false
     if key = "back" then
+        m.comments.visible = false
         if m.video.state = "playing" or m.video.state = "paused" or m.video.state = "buffering" then save(false, true)
         m.video.control = "stop"
         navigate({ action: "back" })

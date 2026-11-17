@@ -76,6 +76,7 @@ function definitions() as Object
         { key: "quality", name: "画质" }
         { key: "mode", name: "播放模式" }
         { key: "list", name: "选集/推荐" }
+        { key: "comments", name: "评论" }
         { key: "interact", name: "互动" }
     ]
 end function
@@ -227,6 +228,8 @@ sub selectCurrent(key as String)
         m.top.keywordRequested = true
     else if key = "list" then
         m.top.listRequested = true
+    else if key = "comments" then
+        m.top.commentsRequested = true
     else if key = "interact" then
         m.top.interactionRequested = true
     else if Left(key, 2) = "q:" then
