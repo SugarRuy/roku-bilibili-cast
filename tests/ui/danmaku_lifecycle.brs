@@ -42,9 +42,27 @@ sub main()
     m.top.enabled = true
     onEnabled()
     check(m.basePos = 60 and m.playing and m.top.visible, "reenabling resyncs current playback")
+    ' A node-valued field can notify again while the same Video updates.
+    ' This is not a new binding and must not truncate comments already moving.
+    item = m.pool[0]
+    item.busy = true
+    item.scroll = true
+    item.until = 70
+    item.g.visible = true
+    item.anim.control = "start"
+    m.basePos = 60.25
+    m.cursor = 17
+    m.spawnBucket = 60
+    m.spawnedSec = 3
+    onVideo()
+    check(item.busy and item.g.visible and item.anim.control = "start", "same video notification preserves active animation")
+    check(m.basePos = 60.25 and m.cursor = 17, "same video notification preserves clock and cursor")
+    check(m.spawnBucket = 60 and m.spawnedSec = 3, "same video notification preserves rate limit")
+    check(m.tick.control = "start" and replacement.listeners.Count() = 2, "same video notification keeps timer and listeners")
     m.top.video = invalid
     onVideo()
     check(m.boundVideo = invalid and replacement.listeners.Count() = 0, "release detaches video")
+    check(not item.busy and not item.g.visible, "real unbind still removes active comments")
     check(m.tick.control = "stop" and not m.playing, "release stops animation clock")
     pending = { cancelled: false }
     m.task = pending

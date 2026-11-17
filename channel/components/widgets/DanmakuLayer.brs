@@ -137,8 +137,13 @@ end sub
 ' ---------- clock: video position, extrapolated between notifications ----------
 
 sub onVideo()
-    unbindVideo()
     v = m.top.video
+    ' The node-valued field also notifies when this same Video updates.
+    ' Rebinding here would clear live comments and restart the clock every time.
+    if v <> invalid and m.boundVideo <> invalid and m.top.enabled then
+        if v.isSameNode(m.boundVideo) then return
+    end if
+    unbindVideo()
     if v = invalid or not m.top.enabled then return
     m.boundVideo = v
     m.lastVideoState = ""
