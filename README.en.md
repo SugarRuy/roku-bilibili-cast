@@ -1,4 +1,4 @@
-# Roku小电视 (Roku Little TV) — a Bilibili client for Roku
+# Roku小电视 (Roku BiliBiliTV) — a Bilibili client for Roku
 
 [中文](README.md) | English
 
@@ -10,10 +10,13 @@ Watch Bilibili directly on a Roku TV. **The app runs entirely on the TV by itsel
 > Intermittent danmaku stutter and some playback/interaction validation remain open. Read the [release notes and known limits](docs/releases/v0.2.0.md) (Chinese).
 > Historical v0.1.7 downloads use the previous branding and do not include these additions.
 
-> **Feature branch** `feature/player-comments` adds a comments drawer inside player
+> **Local main additions (unreleased)** include a comments drawer inside player
 > settings. Reading shrinks the video and temporarily hides danmaku; closing restores
-> both. Hot comments, full text and replies are available for testing, not yet merged
-> or released. See [behavior and validation](docs/comments.md) (Chinese).
+> both. Hot comments, full text and replies are included.
+> See [behavior and validation](docs/comments.md) (Chinese).
+> Local main also includes fixes for prematurely cleared danmaku, stale playback
+> requests and delayed interaction menus. See the [runtime audit](docs/player-runtime-audit.md).
+> These changes are not included in the v0.2.0 download.
 
 - Home: recommended, popular and ranking, with every video's publish date
 - Live streams: when you are logged in, the streamers you follow come first while they are live; switch quality from the remote
@@ -35,9 +38,9 @@ The interface is in Chinese, as is Bilibili.
 
 ## Screenshots
 
-The unmerged `fix/remote-seek-controls` branch adds pause-to-seek controls:
+Local main includes pause-to-seek controls, not yet in a published release:
 Rewind/Fast Forward opens the position picker, subsequent presses move the target,
-OK/Play commits, and Back cancels. It includes the pending comments feature and
+OK/Play commits, and Back cancels. It includes the comments feature and
 playback cleanup fixes. See the [behavior and device observations](docs/remote-seek.md).
 
 These screenshots show the previous name and artwork.
@@ -70,7 +73,11 @@ You need a Roku TV or player and a computer on the same LAN. The script below ru
    scripts/deploy.sh
    ```
 
-   The app opens by itself when the install finishes, and Roku小电视 stays on the Roku home screen. To update after pulling new code, run the same command again.
+   The app opens by itself when the install finishes. Find **Roku BiliBiliTV** in the Roku home screen's Apps list.
+   The system name uses English to avoid missing Chinese glyphs; the tile artwork, in-app name and phone casting name remain Roku小电视.
+   To update after pulling new code, run the same command again.
+
+   The system-name correction is merged into local main; the v0.2.0 download below still uses the Chinese system name.
 
 **Windows or manual installation:** After step 1, download the [v0.2.0 prerelease ZIP](https://github.com/SugarRuy/roku-bilibili-cast/releases/download/v0.2.0/roku-bilibili-cast-v0.2.0.zip), open `http://<the IP shown on your TV>` in a browser, sign in with the Roku developer account, and upload the ZIP. See the [release notes](docs/releases/v0.2.0.md) for features and validation limits.
 

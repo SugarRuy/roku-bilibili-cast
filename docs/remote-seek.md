@@ -1,7 +1,8 @@
 # 快退／快进键与暂停选位
 
 分支：`fix/remote-seek-controls`，基于 `fix/player-progress-timeout`。
-包含尚未合并的评论侧栏和播放清理防护；不在已发布的 v0.2.0 中。
+已连同评论侧栏和后续播放防护修复合入本地 main；尚未发布，
+不在已发布的 v0.2.0 中。
 
 ## YouTube 实机观察
 
