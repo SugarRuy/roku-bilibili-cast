@@ -35,7 +35,8 @@ def main():
     if not interpreter.is_file():
         raise SystemExit("Install brs@0.45.0 with the command in this file's docstring.")
     BUILD.mkdir(parents=True, exist_ok=True)
-    helpers = functions("channel/components/common/utils.brs", ["isNil", "strOf", "intOf"])
+    helpers = functions("channel/components/common/utils.brs", ["isNil", "strOf", "intOf", "fmtTime"])
+    seek_source = ROOT.joinpath("channel/components/screens/PlayerSeek.brs").read_text(encoding="utf-8")
     assertion = """
 sub check(passed as Boolean, label as String)
     if not passed then
@@ -55,7 +56,7 @@ end sub
             "channel/components/widgets/CommentsPanel.brs"
         ).read_text(encoding="utf-8"),
         "comments_player": (
-            functions("channel/components/screens/PlayerScreen.brs", [
+            seek_source + functions("channel/components/screens/PlayerScreen.brs", [
                 "applyDanmakuSettings", "openComments", "closeComments",
                 "layoutCommentVideo", "toggleCommentPlayback", "showHud",
             ])
@@ -78,7 +79,12 @@ end sub
     )
     suites["playback_release"] = (
         ROOT.joinpath("channel/components/cast/CastPlayerAdapter.brs").read_text(encoding="utf-8")
+        + seek_source
         + video_doubles
+    )
+    suites["remote_seek"] = (
+        seek_source + scene_doubles
+        + functions("channel/components/screens/PlayerScreen.brs", ["onKeyEvent"])
     )
     for name, source in suites.items():
         harness = ROOT.joinpath(f"tests/ui/{name}.brs").read_text(encoding="utf-8")

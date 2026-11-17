@@ -28,6 +28,27 @@ sub main()
     m.castReleased = false
     releasePlayback(false)
     check(m.saved = 1, "completion cleanup preserves already-finalized progress")
+    m.castReleased = false
+    m.switchingPlayback = false
+    m.video.duration = 250
+    m.video.position = 120
+    m.video.seek = -1
+    m.seekActive = true
+    m.seekOrigin = 120
+    m.seekTarget = 200
+    m.seekWasPlaying = true
+    m.top.castCommand = { action: "pause" }
+    onPlayerCastCommand()
+    check(not m.seekActive and m.video.control = "pause" and m.video.seek = -1, "phone pause cancels the local preview without committing it")
+    m.seekActive = true
+    m.top.castCommand = { action: "seek", position: 55 }
+    onPlayerCastCommand()
+    check(not m.seekActive and m.video.seek = 55, "phone seek overrides the preview target")
+    m.seekActive = true
+    m.video.state = "paused"
+    m.top.castCommand = { action: "resume" }
+    onPlayerCastCommand()
+    check(not m.seekActive and m.video.control = "resume", "phone resume dismisses the preview")
     print "PASS playback_release"; m.checks
 end sub
 

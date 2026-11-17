@@ -16,6 +16,7 @@ sub init()
     m.coinMenu = m.top.findNode("coinMenu")
     m.list = m.top.findNode("list")
     m.dmHint = m.top.findNode("dmHint")
+    initPlaybackInput()
 
     m.titleLabel.font = cjkFont(42)
     m.subLabel.font = cjkFont(28)
@@ -28,9 +29,6 @@ sub init()
     m.quality.color = accent()
     m.spinner.control = "start"
 
-    m.video.trickPlayBar.filledBarBlendColor = accent()
-    m.video.bufferingBar.filledBarBlendColor = accent()
-    m.video.retrievingBar.filledBarBlendColor = accent()
     m.video.notificationInterval = 1
 
     m.video.observeFieldScoped("state", "onState")
@@ -39,7 +37,6 @@ sub init()
     m.top.observeField("focusedChild", "onFocusChanged")
     m.lastSaved = 0
     m.lastReport = 0
-    m.stateClock = CreateObject("roTimespan")
     m.shownOnce = false
     m.format = ""
     m.related = []
@@ -376,6 +373,7 @@ sub onDanmakuCount()
 end sub
 
 sub openPanel()
+    cancelSeek()
     if m.comments.visible then closeComments()
     m.panel.visible = true
     m.panel.setFocus(true)
@@ -384,7 +382,7 @@ end sub
 
 sub closePanel()
     m.panel.visible = false
-    m.video.setFocus(true)
+    m.playbackInput.setFocus(true)
     showHud(true)
 end sub
 
@@ -392,6 +390,7 @@ end sub
 
 sub openComments()
     if m.req = invalid then return
+    cancelSeek()
     m.panel.visible = false
     m.list.visible = false
     m.comments.aid = strOf(m.req.aid)
@@ -408,7 +407,7 @@ sub closeComments()
     m.comments.visible = false
     layoutCommentVideo()
     applyDanmakuSettings()
-    m.video.setFocus(true)
+    m.playbackInput.setFocus(true)
     showHud(true)
     print "[comments-ui] close width="; m.video.width; " state="; m.video.state; " dm="; m.danmaku.enabled
 end sub
@@ -444,6 +443,7 @@ end sub
 
 sub openList()
     if m.list.content = invalid then return
+    cancelSeek()
     if m.comments.visible then closeComments()
     if m.req.pages.Count() > 1 then
         m.list.focusItem = [0, m.index]
@@ -456,7 +456,7 @@ end sub
 
 sub closeList()
     m.list.visible = false
-    m.video.setFocus(true)
+    m.playbackInput.setFocus(true)
 end sub
 
 ' Rows: the parts of this video (when there are several), then related videos.
@@ -538,6 +538,7 @@ end sub
 ' Switch to another video (from the drawer, or the next one in 自动连播):
 ' fetch its parts, then carry on where this TV last left it.
 sub openVideo(card as Object)
+    cancelSeek(false)
     m.comments.aid = ""
     m.video.control = "stop"
     m.error.visible = false
@@ -585,6 +586,7 @@ function nextVideo() as Dynamic
 end function
 
 sub startPart(index as Integer, startAt as Integer, fmt as String)
+    cancelSeek(false)
     m.interactionMenu.visible = false
     m.coinMenu.visible = false
     m.index = index
@@ -648,6 +650,7 @@ sub onPlay(event as Object)
 end sub
 
 sub applyPlayData(d as Object, startAt as Integer)
+    cancelSeek(false)
     m.format = strOf(d.format)
     m.quality.text = strOf(d.quality_name)
     if m.qualityChoice = "auto" and m.format = "dash" then m.quality.text = "自动 · 最高 " + strOf(d.quality_name)
@@ -663,13 +666,13 @@ sub applyPlayData(d as Object, startAt as Integer)
     if startAt > 0 then c.PlayStart = startAt
     m.video.content = c
     m.video.control = "play"
-    if not m.list.visible and not m.panel.visible and not m.comments.visible then m.video.setFocus(true)
+    if not m.list.visible and not m.panel.visible and not m.comments.visible then m.playbackInput.setFocus(true)
 end sub
 
 sub onState()
     if m.castReleased then return
     publishCastState()
-    m.stateClock.Mark()
+    paintPlaybackProgress()
     s = m.video.state
     if s = "playing" then
         m.loading.visible = false
@@ -684,10 +687,16 @@ sub onState()
         if not m.shownOnce then
             m.shownOnce = true
             showHud(true)
+        else if not m.seekActive and not m.panel.visible then
+            showHud(true)
         end if
     else if s = "paused" then
+        m.loading.visible = false
         showHud(false)
+    else if s = "buffering" then
+        m.loading.visible = not m.seekActive
     else if s = "error" then
+        cancelSeek(false)
         secs = Int(m.video.position)
         if m.switchingPlayback and m.qualityBackup <> invalid then
             m.switchingPlayback = false
@@ -711,6 +720,7 @@ sub onState()
             showError("播放出错：" + strOf(m.video.errorMsg) + " (" + strOf(m.video.errorCode) + ")")
         end if
     else if s = "finished" then
+        cancelSeek(false)
         onFinished()
     end if
 end sub
@@ -736,6 +746,7 @@ end sub
 
 sub onPosition()
     if m.castReleased then return
+    paintPlaybackProgress()
     if m.qualityResumePending then
         ' Roku may seek to the preceding DASH keyframe. Only hide the transient
         ' zero position; waiting for an exact timestamp could stall cast status.
@@ -782,10 +793,12 @@ sub showHud(autoHide as Boolean)
     m.hudTimer.control = "stop"
     m.hud.visible = not m.comments.visible
     if m.comments.visible then return
-    if autoHide then m.hudTimer.control = "start"
+    paintPlaybackProgress()
+    if autoHide and m.seekActive <> true then m.hudTimer.control = "start"
 end sub
 
 sub hideHud()
+    if m.seekActive then return
     if m.comments.visible then
         m.hud.visible = false
         return
@@ -804,24 +817,13 @@ sub onFocusChanged()
     if m.comments.visible then
         m.comments.setFocus(true)
     else
-        m.video.setFocus(true)
+        m.playbackInput.setFocus(true)
     end if
 end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
     if m.comments.visible then return true
-    ' The Video node swallows the OK press (it uses it for its own bar), so the
-    ' centre button toggles pause on release -- unless the press itself just moved
-    ' the video (confirming a seek), which would make this a double toggle.
-    if key = "OK" and not press then
-        if m.stateClock.TotalMilliseconds() < 700 then return true
-        if m.video.state = "playing" then
-            m.video.control = "pause"
-        else if m.video.state = "paused" then
-            m.video.control = "resume"
-        end if
-        return true
-    end if
+    if handlePlaybackKey(key, press) then return true
     if not press then return false
     if key = "back" then
         releasePlayback()

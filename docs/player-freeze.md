@@ -25,7 +25,8 @@ sub onPosition()
 强制终止并重开 App 后，ECP 的 active-app 能返回 dev，但 app-ui 查询超时，
 日志停在编译结束、进入 main 之前。安装新的测试包也没有清除此状态。
 两次远程重启按键序列均未观察到 uptime 归零，因此不能宣称重启成功；
-已请用户实际断电重启，不做恢复出厂设置。
+当时曾请用户实际断电重启；后续已找到并验证开发者 HTTP 重启接口，
+无需用户拔电，见下方恢复记录。
 
 ## 针对性修改
 
@@ -54,5 +55,30 @@ sub onPosition()
 - 解码器尚未回报 stopped 时，投屏状态仍立即标为停止。
 - 重复退出不重复保存；已完成进度不被退出清理覆盖。
 
-BrighterScript 编译及电视端编译通过。真机恢复和回归结果待补充；
-当前不能把安装成功当作 App 已恢复响应。
+BrighterScript 编译及电视端编译通过。该修复完成时尚未恢复真机，
+不能把当时的安装成功当作 App 已恢复响应。
+
+## 后续恢复记录
+
+在 `fix/remote-seek-controls` 分支安装并验证遥控器修正时，继续排查：
+
+1. 强制退出已生效，`query/app-state/dev` 返回 `inactive`，
+   接收端口关闭；当时 YouTube 仍可正常播放。不是没有权限结束 App。
+2. 新测试包仍停在编译完成后。调试终端 `clear_launch_caches` 返回 `Done.`，
+   再启动也没有恢复。
+3. 临时去掉 `sdk_instant_resume` 和 `run_as_process` 的诊断包仍然挂起。
+   随后只有 `Main`、一个 Scene 和一条 Label 的最小程序也没有输出
+   `Main entered`；排查范围因此缩小到开发程序启动环节，不能归因于快进或评论代码。
+4. 找到官方 [MCP device_reboot](https://developer.roku.com/dev/docs/rsg-sdk-mcp-device-reboot)
+   文档描述的开发者接口：经过开发者认证，向 `/plugin_swup` 提交
+   `mysubmit=Reboot`。本机网页的表单明确使用 **multipart/form-data**。
+   最初的 URL encoded 请求未重启；按网页表单格式提交后返回 HTTP 200，
+   设备短暂离线，`uptime` 从约 791841 秒降到 18 秒，证实真正重启。
+5. 在重启前已恢复完整遥控器测试包，保留后台启动配置。
+   重启后 App 正常启动，9958 接收服务在线，视频、评论分屏、
+   暂停／继续、遥控选位和手机控制回归通过。
+
+没有清空账号、恢复出厂设置或留下最小诊断程序。
+本次恢复需要实际重启电视；单独结束 App、清缓存和关闭后台启动配置
+没有解除当时的挂起状态。不能因此推论每次 App 故障都必须重启电视。
+短时间正常工作也不能证明最初执行超时的全部根因已修复。
